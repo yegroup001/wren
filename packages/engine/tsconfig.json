@@ -1,0 +1,37 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "emitDeclarationOnly": true,
+    "outDir": "dist",
+    "rootDir": "..",
+    "jsx": "preserve",
+    "types": ["bun"],
+    "verbatimModuleSyntax": false,
+    "exactOptionalPropertyTypes": false,
+    "noUncheckedIndexedAccess": false,
+    "noPropertyAccessFromIndexSignature": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitReturns": false,
+    "noFallthroughCasesInSwitch": false,
+    "isolatedModules": false,
+    "paths": {
+      "src/*": ["./src/*"],
+      "@wren/protocol": ["../protocol/src/index.ts"],
+      "@wren/protocol/*": ["../protocol/src/*"],
+      "@wren/config-node": ["../config-node/src/index.ts"],
+      "@wren/config-node/*": ["../config-node/src/*"],
+      "@wren/model-provider": ["../model-provider/src/index.ts"],
+      "@wren/model-provider/*": ["../model-provider/src/*"],
+    }
+  },
+  "include": [
+    "src/**/*.ts",
+    "../model-provider/src/**/*.ts",
+  ],
+  "exclude": [
+    "src/**/__tests__/**",
+    "src/**/*test*.ts"
+  ],
+  "references": [{ "path": "../protocol" }, { "path": "../config-node" }]
+}

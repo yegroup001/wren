@@ -1,0 +1,24 @@
+{
+  "name": "@wren/adapter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --target bun --external @wren/engine --outdir dist",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test src/*.test.ts"
+  },
+  "dependencies": {
+    "@wren/application": "workspace:*",
+    "@wren/config-node": "workspace:*",
+    "@wren/engine": "workspace:*",
+    "@wren/protocol": "workspace:*",
+    "@wren/storage": "workspace:*",
+    "diff": "^7.0.0",
+    "solid-js": "1.9.14",
+    "zod": "4.4.3"
+  }
+}

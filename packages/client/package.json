@@ -1,0 +1,20 @@
+{
+  "name": "@wren/client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./conformance": "./src/conformance.ts",
+    "./in-process": "./src/in-process.ts"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --target bun --outdir dist",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test src/*.test.ts"
+  },
+  "dependencies": {
+    "@wren/application": "workspace:*",
+    "@wren/protocol": "workspace:*"
+  }
+}

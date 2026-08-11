@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+wren-bin
+*.tsbuildinfo
+packages/tui/*.d.ts
+packages/tui/*.d.ts.map
+
+# Coverage
+coverage/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+.env.wren
+
+# Editor & IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Wren local state
+.wren/
+fixtures/
+
+# Debug & temporary
+.debug-journal.md
+todo-debug.test.tsx
+results/
+.claude/
+
+# External tool build caches (Mill/sbt/BSP language server)
+.bsp/
+/out/
+/project/
+/target/
+/package/
+.omo/
+
+# Internal dev docs (audits, plans, design — not user-facing)
+docs/
+DESIGN.md
+
+# Logs
+*.log

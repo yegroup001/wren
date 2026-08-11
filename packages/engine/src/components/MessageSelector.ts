@@ -1,0 +1,5 @@
+// Wren headless implementation: the upstream task/progress UI logic this
+// module would provide was not carried over. Exports are minimal no-ops so
+// the headless engine loads; the behavior they gate (async-agent progress,
+// permission confirm UI, message selection) is intentionally degraded.
+export const selectableUserMessagesFilter = (..._args: unknown[]) => null

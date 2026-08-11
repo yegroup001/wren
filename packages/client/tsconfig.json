@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "paths": {
+      "@wren/protocol": ["../protocol/src/index.ts"],
+      "@wren/protocol/*": ["../protocol/src/*"],
+      "@wren/application": ["../application/src/index.ts"],
+      "@wren/application/*": ["../application/src/*"],
+      "@wren/client/conformance": ["./src/conformance.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts"],
+  "references": [{ "path": "../protocol" }, { "path": "../application" }]
+}

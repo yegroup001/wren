@@ -1,0 +1,42 @@
+diff --git a/index.bun.js b/index.bun.js
+index 9d91f5d..41d7924 100644
+--- a/index.bun.js
++++ b/index.bun.js
+@@ -590,12 +590,10 @@ function _removeNode(parent, node) {
+   }
+   parent.remove(node);
+   slotParent?.didRemoveSlotChild(parent, node);
+-  process.nextTick(() => {
+-    if (node instanceof BaseRenderable && !node.parent) {
+-      node.destroyRecursively();
+-      return;
+-    }
+-  });
++  if (node instanceof BaseRenderable && !node.parent) {
++    node.destroyRecursively();
++    return;
++  }
+ }
+ function _createTextNode(value, decodeEntities) {
+   log("Creating text node:", value);
+diff --git a/index.js b/index.js
+index 24ceb58..cece643 100644
+--- a/index.js
++++ b/index.js
+@@ -562,12 +562,10 @@ function _removeNode(parent, node) {
+   }
+   parent.remove(node);
+   slotParent?.didRemoveSlotChild(parent, node);
+-  process.nextTick(() => {
+-    if (node instanceof BaseRenderable && !node.parent) {
+-      node.destroyRecursively();
+-      return;
+-    }
+-  });
++  if (node instanceof BaseRenderable && !node.parent) {
++    node.destroyRecursively();
++    return;
++  }
+ }
+ function _createTextNode(value, decodeEntities) {
+   log("Creating text node:", value);

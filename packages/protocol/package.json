@@ -1,0 +1,17 @@
+{
+  "name": "@wren/protocol",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --target bun --outdir dist",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test src/*.test.ts"
+  },
+  "dependencies": {
+    "zod": "4.4.3"
+  }
+}

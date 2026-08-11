@@ -1,0 +1,72 @@
+{
+  "defaultModel": {
+    "source": "my-openai",
+    "model": "gpt-4o"
+  },
+  "smallFastModel": {
+    "source": "my-openai",
+    "model": "gpt-4o-mini"
+  },
+  "roles": {
+    "fast": {
+      "source": "my-openai",
+      "model": "gpt-4o-mini"
+    },
+    "standard": {
+      "source": "my-openai",
+      "model": "gpt-4o"
+    },
+    "reasoning": {
+      "source": "my-anthropic",
+      "model": "claude-sonnet-4-5"
+    }
+  },
+  "sources": {
+    "my-openai": {
+      "type": "openai-compatible-chat",
+      "baseUrl": "https://api.openai.com/v1",
+      "apiKey": "$OPENAI_API_KEY",
+      "models": {
+        "gpt-4o": {
+          "contextWindow": 128000,
+          "maxOutputTokens": 16384,
+          "displayName": "GPT-4o",
+          "supportsThinking": false
+        },
+        "gpt-4o-mini": {
+          "contextWindow": 128000,
+          "maxOutputTokens": 16384,
+          "displayName": "GPT-4o mini",
+          "supportsThinking": false
+        }
+      }
+    },
+    "my-anthropic": {
+      "type": "anthropic",
+      "apiKey": "$ANTHROPIC_API_KEY",
+      "models": {
+        "claude-sonnet-4-5": {
+          "contextWindow": 200000,
+          "displayName": "Claude Sonnet 4.5",
+          "supportsThinking": true,
+          "reasoningMode": "adaptive"
+        }
+      }
+    },
+    "my-gemini": {
+      "type": "gemini",
+      "apiKey": "$GEMINI_API_KEY",
+      "models": {
+        "gemini-2.5-pro": {
+          "contextWindow": 1048576,
+          "displayName": "Gemini 2.5 Pro",
+          "supportsThinking": true,
+          "thinkingBudget": 24576
+        }
+      }
+    }
+  },
+  "theme": "dark",
+  "autoCompact": true,
+  "preferredLanguage": "auto"
+}

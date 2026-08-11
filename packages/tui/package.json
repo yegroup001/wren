@@ -1,0 +1,23 @@
+{
+  "name": "@wren/tui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "bun build src/index.ts --target bun --outdir dist --external @opentui/core --external @opentui/solid --external solid-js --external @wren/engine --external @wren/adapter --external @wren/protocol --external @wren/client --external @wren/model-provider --external @wren/storage --external @wren/config-node --external @wren/application",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@wren/adapter": "workspace:*",
+    "@wren/config-node": "workspace:*",
+    "@wren/protocol": "workspace:*",
+    "@wren/client": "workspace:*",
+    "@opentui/core": "0.5.1",
+    "@opentui/solid": "0.5.1",
+    "solid-js": "1.9.14"
+  }
+}

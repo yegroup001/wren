@@ -1,0 +1,28 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "exactOptionalPropertyTypes": false,
+    "jsx": "preserve",
+    "jsxImportSource": "@opentui/solid",
+    "outDir": "dist",
+    "paths": {
+      "@wren/adapter": ["../adapter/src/index.ts"],
+      "@wren/adapter/*": ["../adapter/src/*"],
+      "@wren/config-node": ["../config-node/src/index.ts"],
+      "@wren/config-node/*": ["../config-node/src/*"],
+      "@wren/protocol": ["../protocol/src/index.ts"],
+      "@wren/protocol/*": ["../protocol/src/*"],
+      "@wren/client": ["../client/src/index.ts"],
+      "@wren/client/*": ["../client/src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "*.test.ts", "*.test.tsx"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "*.test.ts", "*.test.tsx"],
+  "references": [
+    { "path": "../protocol" },
+    { "path": "../config-node" },
+    { "path": "../client" },
+    { "path": "../adapter" }
+  ]
+}

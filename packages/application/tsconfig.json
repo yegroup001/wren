@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "exactOptionalPropertyTypes": false,
+    "paths": {
+      "@wren/protocol": ["../protocol/src/index.ts"],
+      "@wren/protocol/*": ["../protocol/src/*"],
+      "@wren/engine": ["../engine/src/wren/index.ts"],
+      "@wren/engine/*": ["../engine/src/wren/*"],
+      "@wren/storage": ["../storage/src/index.ts"],
+      "@wren/storage/*": ["../storage/src/*"]
+    }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["src/**/*.test.ts"],
+  "references": [{ "path": "../protocol" }, { "path": "../engine" }, { "path": "../storage" }]
+}

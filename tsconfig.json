@@ -1,0 +1,14 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/protocol" },
+    { "path": "packages/config-node" },
+    { "path": "packages/engine" },
+    { "path": "packages/storage" },
+    { "path": "packages/adapter" },
+    { "path": "packages/tui" },
+    { "path": "packages/client" },
+    { "path": "packages/application" },
+    { "path": "apps/cli" }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "jsx": "preserve",
+    "types": ["bun"],
+    "verbatimModuleSyntax": false,
+    "exactOptionalPropertyTypes": false,
+    "noUncheckedIndexedAccess": false,
+    "noPropertyAccessFromIndexSignature": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitReturns": false,
+    "noFallthroughCasesInSwitch": false,
+    "isolatedModules": false,
+    "paths": {
+      "src/*": ["../engine/src/*"],
+      "@wren/model-provider": ["./src/index.ts"],
+      "@wren/model-provider/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

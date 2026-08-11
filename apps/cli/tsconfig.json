@@ -1,0 +1,33 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "emitDeclarationOnly": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "paths": {
+      "@wren/adapter": ["../../packages/adapter/src/index.ts"],
+      "@wren/adapter/*": ["../../packages/adapter/src/*"],
+      "@wren/protocol": ["../../packages/protocol/src/index.ts"],
+      "@wren/protocol/*": ["../../packages/protocol/src/*"],
+      "@wren/config-node": ["../../packages/config-node/src/index.ts"],
+      "@wren/config-node/*": ["../../packages/config-node/src/*"],
+      "@wren/client": ["../../packages/client/src/index.ts"],
+      "@wren/client/*": ["../../packages/client/src/*"],
+      "@wren/application": ["../../packages/application/src/index.ts"],
+      "@wren/application/*": ["../../packages/application/src/*"],
+      "@wren/engine": ["../../packages/engine/src/wren/index.ts"],
+      "@wren/engine/*": ["../../packages/engine/src/*"]
+    }
+  },
+  "include": ["src/**/*.ts"],
+  "references": [
+    { "path": "../../packages/engine" },
+    { "path": "../../packages/adapter" },
+    { "path": "../../packages/storage" },
+    { "path": "../../packages/tui" },
+    { "path": "../../packages/protocol" },
+    { "path": "../../packages/config-node" },
+    { "path": "../../packages/client" },
+    { "path": "../../packages/application" }
+  ]
+}

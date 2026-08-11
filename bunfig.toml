@@ -1,0 +1,6 @@
+preload = ["./config/follow-redirects-shim.ts", "@opentui/solid/preload"]
+
+[test]
+preload = ["./config/follow-redirects-shim.ts", "@opentui/solid/preload"]
+exclude = ["**/dist/**", "**/node_modules/**"]
+parallel = true

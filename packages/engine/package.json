@@ -1,0 +1,40 @@
+{
+  "name": "@wren/engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/wren/index.ts"
+  },
+  "scripts": {
+    "build": "echo 'engine: source-only (runtime-resolved via bun-stub-plugin)' && exit 0",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test src/**/*.test.ts"
+  },
+  "dependencies": {
+    "@agentclientprotocol/sdk": "^0.19.0",
+    "@anthropic-ai/sdk": "^0.81.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@wren/model-provider": "workspace:*",
+    "@wren/protocol": "workspace:*",
+    "@wren/storage": "workspace:*",
+    "axios": "^1.19.0",
+    "chalk": "^5.6.2",
+    "diff": "^7.0.0",
+    "fuse.js": "^7.5.0",
+    "he": "^1.2.0",
+    "highlight.js": "^11.11.1",
+    "jsonc-parser": "^3.3.1",
+    "lodash-es": "^4.17.21",
+    "marked": "^17.0.6",
+    "picomatch": "^4.0.2",
+    "shell-quote": "^1.10.0",
+    "strip-ansi": "^7.1.0",
+    "turndown": "^7.2.4",
+    "usehooks-ts": "^3.1.1",
+    "ws": "^8.20.0",
+    "xss": "^1.0.15",
+    "yaml": "^2.8.0",
+    "zod": "4.4.3"
+  }
+}

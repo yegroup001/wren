@@ -1,0 +1,278 @@
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test"
+
+// Mock heavy dependencies to avoid import chain issues
+mock.module("src/utils/settings/settings.js", () => ({
+  getInitialSettings: () => ({}),
+}))
+mock.module("src/utils/featureGates.js", () => ({
+  getLocalFeatureValue: (_key: string, defaultValue: unknown) => defaultValue ?? {},
+}))
+mock.module("src/utils/model/modelSupportOverrides.js", () => ({
+  get3PModelCapabilityOverride: () => undefined,
+}))
+
+const {
+  isEffortLevel,
+  parseEffortValue,
+  isValidNumericEffort,
+  convertEffortValueToLevel,
+  getEffortLevelDescription,
+  resolvePickerEffortPersistence,
+  EFFORT_LEVELS,
+} = await import("src/utils/effort.js")
+
+// ─── EFFORT_LEVELS constant ────────────────────────────────────────────
+
+describe("EFFORT_LEVELS", () => {
+  test("contains the five canonical levels", () => {
+    expect(EFFORT_LEVELS).toEqual(["low", "medium", "high", "xhigh", "max"])
+  })
+})
+
+// ─── isEffortLevel ─────────────────────────────────────────────────────
+
+describe("isEffortLevel", () => {
+  test("returns true for 'low'", () => {
+    expect(isEffortLevel("low")).toBe(true)
+  })
+
+  test("returns true for 'medium'", () => {
+    expect(isEffortLevel("medium")).toBe(true)
+  })
+
+  test("returns true for 'high'", () => {
+    expect(isEffortLevel("high")).toBe(true)
+  })
+
+  test("returns true for 'max'", () => {
+    expect(isEffortLevel("max")).toBe(true)
+  })
+
+  test("returns false for 'invalid'", () => {
+    expect(isEffortLevel("invalid")).toBe(false)
+  })
+
+  test("returns false for empty string", () => {
+    expect(isEffortLevel("")).toBe(false)
+  })
+})
+
+// ─── parseEffortValue ──────────────────────────────────────────────────
+
+describe("parseEffortValue", () => {
+  test("returns undefined for undefined", () => {
+    expect(parseEffortValue(undefined)).toBeUndefined()
+  })
+
+  test("returns undefined for null", () => {
+    expect(parseEffortValue(null)).toBeUndefined()
+  })
+
+  test("returns undefined for empty string", () => {
+    expect(parseEffortValue("")).toBeUndefined()
+  })
+
+  test("returns number for integer input", () => {
+    expect(parseEffortValue(42)).toBe(42)
+  })
+
+  test("returns string for valid effort level string", () => {
+    expect(parseEffortValue("low")).toBe("low")
+    expect(parseEffortValue("medium")).toBe("medium")
+    expect(parseEffortValue("high")).toBe("high")
+    expect(parseEffortValue("max")).toBe("max")
+  })
+
+  test("parses numeric string to number", () => {
+    expect(parseEffortValue("42")).toBe(42)
+  })
+
+  test("returns undefined for invalid string", () => {
+    expect(parseEffortValue("invalid")).toBeUndefined()
+  })
+
+  test("non-integer number falls through to string parsing (parseInt truncates)", () => {
+    // 3.14 fails isValidNumericEffort, then String(3.14) -> "3.14" -> parseInt = 3
+    expect(parseEffortValue(3.14)).toBe(3)
+  })
+
+  test("handles case-insensitive effort level strings", () => {
+    expect(parseEffortValue("LOW")).toBe("low")
+    expect(parseEffortValue("HIGH")).toBe("high")
+  })
+})
+
+// ─── isValidNumericEffort ──────────────────────────────────────────────
+
+describe("isValidNumericEffort", () => {
+  test("returns true for integer", () => {
+    expect(isValidNumericEffort(50)).toBe(true)
+  })
+
+  test("returns true for zero", () => {
+    expect(isValidNumericEffort(0)).toBe(true)
+  })
+
+  test("returns true for negative integer", () => {
+    expect(isValidNumericEffort(-1)).toBe(true)
+  })
+
+  test("returns false for float", () => {
+    expect(isValidNumericEffort(3.14)).toBe(false)
+  })
+
+  test("returns false for NaN", () => {
+    expect(isValidNumericEffort(NaN)).toBe(false)
+  })
+
+  test("returns false for Infinity", () => {
+    expect(isValidNumericEffort(Infinity)).toBe(false)
+  })
+})
+
+// ─── convertEffortValueToLevel ─────────────────────────────────────────
+
+describe("convertEffortValueToLevel", () => {
+  test("returns valid effort level string as-is", () => {
+    expect(convertEffortValueToLevel("low")).toBe("low")
+    expect(convertEffortValueToLevel("medium")).toBe("medium")
+    expect(convertEffortValueToLevel("high")).toBe("high")
+    expect(convertEffortValueToLevel("max")).toBe("max")
+  })
+
+  test("returns 'high' for unknown string", () => {
+    expect(convertEffortValueToLevel("unknown" as any)).toBe("high")
+  })
+
+  test("numeric value returns 'high'", () => {
+    expect(convertEffortValueToLevel(50)).toBe("high")
+    expect(convertEffortValueToLevel(100)).toBe("high")
+  })
+})
+
+// ─── getEffortLevelDescription ─────────────────────────────────────────
+
+describe("getEffortLevelDescription", () => {
+  test("returns description for 'low'", () => {
+    const desc = getEffortLevelDescription("low")
+    expect(desc).toContain("Quick")
+  })
+
+  test("returns description for 'medium'", () => {
+    const desc = getEffortLevelDescription("medium")
+    expect(desc).toContain("Balanced")
+  })
+
+  test("returns description for 'high'", () => {
+    const desc = getEffortLevelDescription("high")
+    expect(desc).toContain("Comprehensive")
+  })
+
+  test("returns description for 'max'", () => {
+    const desc = getEffortLevelDescription("max")
+    expect(desc).toContain("Maximum")
+  })
+
+  test("max description does not contain model names", () => {
+    const desc = getEffortLevelDescription("max")
+    expect(desc).not.toContain("Opus")
+    expect(desc).not.toContain("DeepSeek")
+  })
+
+  test("returns description for 'xhigh'", () => {
+    const desc = getEffortLevelDescription("xhigh")
+    expect(desc).toContain("Extended reasoning")
+  })
+
+  test("xhigh description does not contain model names", () => {
+    const desc = getEffortLevelDescription("xhigh")
+    expect(desc).not.toContain("Opus")
+  })
+})
+
+// ─── resolvePickerEffortPersistence ────────────────────────────────────
+
+describe("resolvePickerEffortPersistence", () => {
+  test("returns undefined when picked matches model default and no prior persistence", () => {
+    const result = resolvePickerEffortPersistence("high", "high", undefined, false)
+    expect(result).toBeUndefined()
+  })
+
+  test("returns picked when it differs from model default", () => {
+    const result = resolvePickerEffortPersistence("low", "high", undefined, false)
+    expect(result).toBe("low")
+  })
+
+  test("returns picked when priorPersisted is set (even if same as default)", () => {
+    const result = resolvePickerEffortPersistence("high", "high", "high", false)
+    expect(result).toBe("high")
+  })
+
+  test("returns picked when toggledInPicker is true (even if same as default)", () => {
+    const result = resolvePickerEffortPersistence("high", "high", undefined, true)
+    expect(result).toBe("high")
+  })
+
+  test("returns undefined picked value when no explicit and matches default", () => {
+    const result = resolvePickerEffortPersistence(undefined, "high" as any, undefined, false)
+    expect(result).toBeUndefined()
+  })
+})
+
+// ─── modelSupportsMaxEffort ────────────────────────────────────────────
+
+describe("modelSupportsMaxEffort", () => {
+  test("returns true for opus-4-7", async () => {
+    const { modelSupportsMaxEffort } = await import("src/utils/effort.js")
+    expect(modelSupportsMaxEffort("claude-opus-4-7-20250918")).toBe(true)
+  })
+
+  test("returns true for opus-4-6", async () => {
+    const { modelSupportsMaxEffort } = await import("src/utils/effort.js")
+    expect(modelSupportsMaxEffort("claude-opus-4-6-20250514")).toBe(true)
+  })
+
+  test("returns true for sonnet models", async () => {
+    const { modelSupportsMaxEffort } = await import("src/utils/effort.js")
+    expect(modelSupportsMaxEffort("claude-sonnet-4-6-20250514")).toBe(true)
+  })
+
+  test("returns true for haiku models", async () => {
+    const { modelSupportsMaxEffort } = await import("src/utils/effort.js")
+    expect(modelSupportsMaxEffort("claude-haiku-4-5-20251001")).toBe(true)
+  })
+
+  test("returns true for deepseek models", async () => {
+    const { modelSupportsMaxEffort } = await import("src/utils/effort.js")
+    expect(modelSupportsMaxEffort("deepseek-v4-pro")).toBe(true)
+  })
+
+  test("returns true for unknown models", async () => {
+    const { modelSupportsMaxEffort } = await import("src/utils/effort.js")
+    expect(modelSupportsMaxEffort("some-random-model")).toBe(true)
+  })
+})
+
+// ─── modelSupportsXhighEffort ──────────────────────────────────────────
+
+describe("modelSupportsXhighEffort", () => {
+  test("returns true for opus-4-7", async () => {
+    const { modelSupportsXhighEffort } = await import("src/utils/effort.js")
+    expect(modelSupportsXhighEffort("claude-opus-4-7-20250918")).toBe(true)
+  })
+
+  test("returns true for sonnet models", async () => {
+    const { modelSupportsXhighEffort } = await import("src/utils/effort.js")
+    expect(modelSupportsXhighEffort("claude-sonnet-4-6-20250514")).toBe(true)
+  })
+
+  test("returns true for haiku models", async () => {
+    const { modelSupportsXhighEffort } = await import("src/utils/effort.js")
+    expect(modelSupportsXhighEffort("claude-haiku-4-5-20251001")).toBe(true)
+  })
+
+  test("returns true for unknown models", async () => {
+    const { modelSupportsXhighEffort } = await import("src/utils/effort.js")
+    expect(modelSupportsXhighEffort("some-random-model")).toBe(true)
+  })
+})

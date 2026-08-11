@@ -1,0 +1,26 @@
+{
+  "name": "@wren/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "wren": "src/main.ts"
+  },
+  "scripts": {
+    "build": "bun run build.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test src/*.test.ts"
+  },
+  "dependencies": {
+    "@commander-js/extra-typings": "^14.0.0",
+    "@wren/adapter": "workspace:*",
+    "@wren/engine": "workspace:*",
+    "@wren/protocol": "workspace:*",
+    "@wren/config-node": "workspace:*",
+    "@wren/client": "workspace:*",
+    "@wren/application": "workspace:*",
+    "@wren/storage": "workspace:*",
+    "@wren/tui": "workspace:*",
+    "commander": "^14.0.0"
+  }
+}
