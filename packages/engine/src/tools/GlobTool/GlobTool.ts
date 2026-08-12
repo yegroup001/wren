@@ -1,18 +1,20 @@
-import { z } from 'zod/v4'
-import type { ValidationResult } from 'src/Tool.js'
-import { buildTool, type ToolDef } from 'src/Tool.js'
-import { getCwd } from 'src/utils/cwd.js'
-import { isENOENT } from 'src/utils/errors.js'
-import { FILE_NOT_FOUND_CWD_NOTE, suggestPathUnderCwd } from 'src/utils/file.js'
-import { getFsImplementation } from 'src/utils/fsOperations.js'
-import { glob } from 'src/utils/glob.js'
-import { lazySchema } from 'src/utils/lazySchema.js'
-import { expandPath, toRelativePath } from 'src/utils/path.js'
-import { checkReadPermissionForTool } from 'src/utils/permissions/filesystem.js'
-import type { PermissionDecision } from 'src/utils/permissions/PermissionResult.js'
-import { matchWildcardPattern } from 'src/utils/permissions/shellRuleMatching.js'
-import { DESCRIPTION, GLOB_TOOL_NAME } from './prompt.js'
-import { getToolUseSummary, userFacingName } from './UI.js'
+import { isAbsolute } from "node:path"
+import type { ValidationResult } from "src/Tool.js"
+import { buildTool, type ToolDef } from "src/Tool.js"
+import { getCwd } from "src/utils/cwd.js"
+import { isENOENT } from "src/utils/errors.js"
+import { FILE_NOT_FOUND_CWD_NOTE, suggestPathUnderCwd } from "src/utils/file.js"
+import { getFsImplementation } from "src/utils/fsOperations.js"
+import { extractGlobBaseDirectory, glob } from "src/utils/glob.js"
+import { lazySchema } from "src/utils/lazySchema.js"
+import { expandPath, toRelativePath } from "src/utils/path.js"
+import { checkReadPermissionForTool } from "src/utils/permissions/filesystem.js"
+import type { PermissionDecision } from "src/utils/permissions/PermissionResult.js"
+import { matchWildcardPattern } from "src/utils/permissions/shellRuleMatching.js"
+import { z } from "zod/v4"
+import { DESCRIPTION, GLOB_TOOL_NAME } from "./prompt.js"
+import { getToolUseSummary, userFacingName } from "./UI.js"
+
 const inputSchema = lazySchema(() =>
   z.strictObject({
     pattern: z.string().describe("The glob pattern to match files against"),
@@ -69,7 +71,10 @@ export const GlobTool = buildTool({
   isSearchOrReadCommand() {
     return { isSearch: true, isRead: false }
   },
-  getPath({ path }): string {
+  getPath({ path, pattern }): string {
+    if (isAbsolute(pattern)) {
+      return extractGlobBaseDirectory(pattern).baseDir || pattern
+    }
     return path ? expandPath(path) : getCwd()
   },
   async preparePermissionMatcher({ pattern }) {

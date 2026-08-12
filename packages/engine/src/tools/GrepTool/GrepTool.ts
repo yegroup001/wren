@@ -1,26 +1,30 @@
-import { z } from 'zod/v4'
-import type { ValidationResult } from 'src/Tool.js'
-import { buildTool, type ToolDef } from 'src/Tool.js'
-import { getCwd } from 'src/utils/cwd.js'
-import { isENOENT } from 'src/utils/errors.js'
-import { FILE_NOT_FOUND_CWD_NOTE, suggestPathUnderCwd } from 'src/utils/file.js'
-import { getFsImplementation } from 'src/utils/fsOperations.js'
-import { lazySchema } from 'src/utils/lazySchema.js'
-import { expandPath, toRelativePath } from 'src/utils/path.js'
+import type { ValidationResult } from "src/Tool.js"
+import { buildTool, type ToolDef } from "src/Tool.js"
+import { getCwd } from "src/utils/cwd.js"
+import { isENOENT } from "src/utils/errors.js"
+import { FILE_NOT_FOUND_CWD_NOTE, suggestPathUnderCwd } from "src/utils/file.js"
+import { getFsImplementation } from "src/utils/fsOperations.js"
+import { lazySchema } from "src/utils/lazySchema.js"
+import { expandPath, getDirectoryForPath, toRelativePath } from "src/utils/path.js"
 import {
   checkReadPermissionForTool,
   getFileReadIgnorePatterns,
+  isSensitivePlanReadPath,
+  isSensitivePlanSearchGlob,
   normalizePatternsToPath,
-} from 'src/utils/permissions/filesystem.js'
-import type { PermissionDecision } from 'src/utils/permissions/PermissionResult.js'
-import { matchWildcardPattern } from 'src/utils/permissions/shellRuleMatching.js'
-import { getGlobExclusionsForPluginCache } from 'src/utils/plugins/orphanedPluginFilter.js'
-import { ripGrep } from 'src/utils/ripgrep.js'
-import { semanticBoolean } from 'src/utils/semanticBoolean.js'
-import { semanticNumber } from 'src/utils/semanticNumber.js'
-import { plural } from 'src/utils/stringUtils.js'
-import { GREP_TOOL_NAME, getDescription } from './prompt.js'
-import { getToolUseSummary } from './UI.js'
+  PLAN_SENSITIVE_SEARCH_EXCLUSIONS,
+} from "src/utils/permissions/filesystem.js"
+import type { PermissionDecision } from "src/utils/permissions/PermissionResult.js"
+import { matchWildcardPattern } from "src/utils/permissions/shellRuleMatching.js"
+import { getGlobExclusionsForPluginCache } from "src/utils/plugins/orphanedPluginFilter.js"
+import { ripGrep } from "src/utils/ripgrep.js"
+import { semanticBoolean } from "src/utils/semanticBoolean.js"
+import { semanticNumber } from "src/utils/semanticNumber.js"
+import { plural } from "src/utils/stringUtils.js"
+import { z } from "zod/v4"
+import { GREP_TOOL_NAME, getDescription } from "./prompt.js"
+import { getToolUseSummary } from "./UI.js"
+
 const inputSchema = lazySchema(() =>
   z.strictObject({
     pattern: z.string().describe("The regular expression pattern to search for in file contents"),
@@ -294,6 +298,7 @@ export const GrepTool = buildTool({
     { abortController, getAppState },
   ) {
     const absolutePath = path ? expandPath(path) : getCwd()
+    const searchRoot = getDirectoryForPath(absolutePath)
     const args = ["--hidden"]
 
     // Exclude VCS directories to avoid noise from version control metadata
@@ -375,11 +380,24 @@ export const GrepTool = buildTool({
       }
     }
 
-    // Add ignore patterns
     const appState = getAppState()
+    if (
+      appState.toolPermissionContext.mode === "plan" &&
+      !isSensitivePlanReadPath(path ?? absolutePath) &&
+      !isSensitivePlanSearchGlob(glob ?? "")
+    ) {
+      for (const exclusion of PLAN_SENSITIVE_SEARCH_EXCLUSIONS) {
+        args.push("--iglob", exclusion)
+      }
+    }
+
+    // Add ignore patterns
     const ignorePatterns = normalizePatternsToPath(
-      getFileReadIgnorePatterns(appState.toolPermissionContext),
-      getCwd(),
+      getFileReadIgnorePatterns(
+        appState.toolPermissionContext,
+        appState.toolPermissionContext.mode === "plan",
+      ),
+      searchRoot,
     )
     for (const ignorePattern of ignorePatterns) {
       // Note: ripgrep only applies gitignore patterns relative to the working directory
@@ -403,7 +421,12 @@ export const GrepTool = buildTool({
     // We don't use AbortController for timeout to avoid interrupting the agent loop
     // If ripgrep times out, it throws RipgrepTimeoutError which propagates up
     // so Wren knows the search didn't complete (rather than thinking there were no matches)
-    const results = await ripGrep(args, absolutePath, abortController.signal)
+    const results = await ripGrep(
+      args,
+      absolutePath,
+      abortController.signal,
+      getDirectoryForPath(absolutePath),
+    )
 
     if (output_mode === "content") {
       // For content mode, results are the actual content lines

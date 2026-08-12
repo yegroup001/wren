@@ -1,15 +1,14 @@
-import { z } from 'zod/v4'
-import {
-  handlePlanModeTransition,
-} from 'src/bootstrap/state.js'
-import type { Tool } from 'src/Tool.js'
-import { buildTool, type ToolDef } from 'src/Tool.js'
-import { lazySchema } from 'src/utils/lazySchema.js'
-import { applyPermissionUpdate } from 'src/utils/permissions/PermissionUpdate.js'
-import { prepareContextForPlanMode } from 'src/utils/permissions/permissionSetup.js'
-import { isPlanModeInterviewPhaseEnabled } from 'src/utils/planModeV2.js'
-import { ENTER_PLAN_MODE_TOOL_NAME } from './constants.js'
-import { getEnterPlanModeToolPrompt } from './prompt.js'
+import { handlePlanModeTransition } from "src/bootstrap/state.js"
+import type { Tool } from "src/Tool.js"
+import { buildTool, type ToolDef } from "src/Tool.js"
+import { lazySchema } from "src/utils/lazySchema.js"
+import { applyPermissionUpdate } from "src/utils/permissions/PermissionUpdate.js"
+import { prepareContextForPlanMode } from "src/utils/permissions/permissionSetup.js"
+import { isPlanModeInterviewPhaseEnabled } from "src/utils/planModeV2.js"
+import { z } from "zod/v4"
+import { ENTER_PLAN_MODE_TOOL_NAME } from "./constants.js"
+import { getEnterPlanModeToolPrompt } from "./prompt.js"
+
 const inputSchema = lazySchema(() =>
   z.strictObject({
     // No parameters needed
@@ -30,7 +29,7 @@ export const EnterPlanModeTool: Tool<InputSchema, Output> = buildTool({
   searchHint: "switch to plan mode to design an approach before coding",
   maxResultSizeChars: 100_000,
   async description() {
-    return "Requests permission to enter plan mode for complex tasks requiring exploration and design"
+    return "Switches to plan mode for complex tasks requiring exploration and design"
   },
   async prompt() {
     return getEnterPlanModeToolPrompt()
@@ -65,13 +64,19 @@ export const EnterPlanModeTool: Tool<InputSchema, Output> = buildTool({
     // Update the permission mode to 'plan'. prepareContextForPlanMode runs
     // the classifier activation side effects when the user's defaultMode is
     // 'auto' — see permissionSetup.ts for the full lifecycle.
-    context.setAppState((prev) => ({
-      ...prev,
-      toolPermissionContext: applyPermissionUpdate(
+    context.setAppState((prev) => {
+      const alreadyInPlanMode = prev.toolPermissionContext.mode === "plan"
+      const toolPermissionContext = applyPermissionUpdate(
         prepareContextForPlanMode(prev.toolPermissionContext),
         { type: "setMode", mode: "plan", destination: "session" },
-      ),
-    }))
+      )
+      return {
+        ...prev,
+        toolPermissionContext: alreadyInPlanMode
+          ? toolPermissionContext
+          : { ...toolPermissionContext, planExitApprovalRequired: false },
+      }
+    })
 
     return {
       data: {
@@ -93,7 +98,7 @@ In plan mode, you should:
 3. Consider multiple approaches and their trade-offs
 4. Use AskUserQuestion if you need to clarify the approach
 5. Design a concrete implementation strategy
-6. When ready, use ExitPlanMode to present your plan for approval
+6. When ready, use ExitPlanMode to finish the planning phase
 
 Remember: DO NOT write or edit any files yet. This is a read-only exploration and planning phase.`
 

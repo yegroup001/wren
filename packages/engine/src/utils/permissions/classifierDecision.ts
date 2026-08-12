@@ -61,6 +61,18 @@ const SAFE_YOLO_ALLOWLISTED_TOOLS = new Set([
   YOLO_CLASSIFIER_TOOL_NAME,
 ])
 
+const SAFE_PLAN_ALLOWLISTED_TOOLS = new Set([
+  FILE_READ_TOOL_NAME,
+  GREP_TOOL_NAME,
+  GLOB_TOOL_NAME,
+  LSP_TOOL_NAME,
+  SEARCH_EXTRA_TOOLS_TOOL_NAME,
+])
+
+export function isPlanModeAllowlistedTool(toolName: string): boolean {
+  return SAFE_PLAN_ALLOWLISTED_TOOLS.has(toolName)
+}
+
 export function isAutoModeAllowlistedTool(toolName: string): boolean {
   return SAFE_YOLO_ALLOWLISTED_TOOLS.has(toolName)
 }

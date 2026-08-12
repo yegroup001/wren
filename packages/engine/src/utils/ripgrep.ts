@@ -156,6 +156,7 @@ function ripGrepRaw(
   abortSignal: AbortSignal,
   callback: (error: ExecFileException | null, stdout: string, stderr: string) => void,
   singleThread = false,
+  cwd?: string,
 ): ChildProcess {
   // NB: When running interactively, ripgrep does not require a path as its last
   // argument, but when run non-interactively, it will hang unless a path or file
@@ -177,6 +178,7 @@ function ripGrepRaw(
     const child = spawn(rgPath, fullArgs, {
       argv0,
       signal: abortSignal,
+      ...(cwd !== undefined && { cwd }),
       // Prevent visible console window on Windows (no-op on other platforms)
       windowsHide: true,
     })
@@ -264,6 +266,7 @@ function ripGrepRaw(
       signal: abortSignal,
       timeout,
       killSignal: process.platform === "win32" ? undefined : "SIGKILL",
+      ...(cwd !== undefined && { cwd }),
     },
     callback,
   )
@@ -384,6 +387,7 @@ export async function ripGrep(
   args: string[],
   target: string,
   abortSignal: AbortSignal,
+  cwd?: string,
 ): Promise<string[]> {
   await codesignRipgrepIfNecessary()
 
@@ -439,6 +443,7 @@ export async function ripGrep(
             handleResult(retryError, retryStdout, retryStderr, true)
           },
           true, // Force single-threaded mode for this retry only
+          cwd,
         )
         return
       }
@@ -488,9 +493,16 @@ export async function ripGrep(
       resolve(lines)
     }
 
-    ripGrepRaw(args, target, abortSignal, (error, stdout, stderr) => {
-      handleResult(error, stdout, stderr, false)
-    })
+    ripGrepRaw(
+      args,
+      target,
+      abortSignal,
+      (error, stdout, stderr) => {
+        handleResult(error, stdout, stderr, false)
+      },
+      false,
+      cwd,
+    )
   })
 }
 

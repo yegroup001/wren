@@ -37,12 +37,25 @@ import {
   type WorkspaceMcpSnapshot,
 } from "../services/mcp/workspace-host.js"
 import { getDefaultAppState } from "../state/AppStateStore.js"
-import type { CompactProgressEvent, Tool, Tools, ToolUseContext } from "../Tool.js"
+import type {
+  CompactProgressEvent,
+  Tool,
+  ToolPermissionContext,
+  Tools,
+  ToolUseContext,
+} from "../Tool.js"
 import { getEmptyToolPermissionContext } from "../Tool.js"
 import { filterToolsByDenyRules, getAllBaseTools, WREN_DEFAULT_TOOLS } from "../tools/index.js"
 import type { Message } from "../types/message.js"
 import type { PermissionMode } from "../types/permissions.js"
-import { isAutoModeAllowlistedTool } from "../utils/permissions/classifierDecision.js"
+import {
+  isAutoModeAllowlistedTool,
+  isPlanModeAllowlistedTool,
+} from "../utils/permissions/classifierDecision.js"
+import {
+  isSensitivePlanReadPath,
+  isSensitivePlanSearchGlob,
+} from "../utils/permissions/filesystem.js"
 import {
   checkRuleBasedPermissions,
   hasPermissionsToUseTool,
@@ -71,14 +84,29 @@ import { applySafeConfigEnvironmentVariables } from "../utils/managedEnv.js"
 import { applyModelConfigToEnv, getModelFallbacks } from "../utils/model/configBridge.js"
 import { getMainLoopModel } from "../utils/model/model.js"
 import { getAgentTranscript } from "../utils/sessionStorage.js"
+import { isTeammate } from "../utils/teammate.js"
 import type { EngineHistorySnapshot } from "./history-snapshot.js"
 
 // ---------------------------------------------------------------------------
 // Public adapter-facing surface
 // ---------------------------------------------------------------------------
 
+export type PermissionModeChangeSource = "manual" | "automatic"
+
+export type PermissionModeChangeOptions = {
+  readonly source?: PermissionModeChangeSource
+}
+
 export type PermissionResolverContext = {
   readonly shouldAvoidPermissionPrompts?: boolean
+  readonly forcePrompt?: boolean
+  /**
+   * Effective toolPermissionContext.mode at the call site. For subagents this
+   * is the agent's resolved mode (see runAgent's agentGetAppState), which can
+   * differ from the session's permissionMode. The resolver should prefer this
+   * over session.permissionMode when deciding auto-allow behavior.
+   */
+  readonly mode?: PermissionMode
 }
 
 /**
@@ -117,7 +145,7 @@ export interface WrenEngine {
   setSDKStatusCallback?(callback: ((status: SDKStatus) => void) | null): void
   setOnCompactProgress?(callback: ((event: CompactProgressEvent) => void) | null): void
   /** Sync permission mode from adapter → engine's toolPermissionContext.mode */
-  setPermissionMode?(mode: string): void
+  setPermissionMode?(mode: string, options?: PermissionModeChangeOptions): void
   /** Engine notifies adapter when toolPermissionContext.mode changes internally (e.g. EnterPlanMode/ExitPlanMode tools) */
   setPermissionModeChangeCallback?(callback: ((mode: string) => void) | null): void
   getMessages(): readonly unknown[]
@@ -206,14 +234,49 @@ function planPermissionContext(context: ToolUseContext): ToolUseContext {
   }
 }
 
-async function checkPlanPermission(
+function isPlanSafeAgent(
+  input: { [key: string]: unknown },
+  agents: readonly AgentDefinition[],
+): boolean {
+  const agentType = input.subagent_type
+  if (agentType !== "Explore" && agentType !== "Plan") return false
+  const definition = agents.find((agent) => agent.agentType === agentType)
+  return definition?.source === "built-in"
+}
+
+export function isPlanSafeToolInput(tool: Tool, input: { [key: string]: unknown }): boolean {
+  if (!isPlanModeAllowlistedTool(tool.name)) return false
+  if (tool.name === "Read") {
+    return typeof input.file_path === "string" && !isSensitivePlanReadPath(input.file_path)
+  }
+  if (tool.name === "LSP") {
+    return typeof input.filePath === "string" && !isSensitivePlanReadPath(input.filePath)
+  }
+  if (tool.name === "Glob") {
+    const pathIsSafe = typeof input.path !== "string" || !isSensitivePlanReadPath(input.path)
+    return (
+      pathIsSafe && typeof input.pattern === "string" && !isSensitivePlanSearchGlob(input.pattern)
+    )
+  }
+  if (tool.name === "Grep") {
+    const pathIsSafe = typeof input.path !== "string" || !isSensitivePlanReadPath(input.path)
+    const globIsSafe = typeof input.glob !== "string" || !isSensitivePlanSearchGlob(input.glob)
+    return pathIsSafe && globIsSafe
+  }
+  return true
+}
+
+export type PermissionPromptOptions = {
+  readonly onForcePrompt?: () => void
+}
+
+export async function checkEnterPlanPermission(
   tool: Tool,
   input: unknown,
   toolUseContext: ToolUseContext,
-  messages: readonly unknown[],
-  tools: Tools,
+  options?: PermissionPromptOptions,
 ): Promise<PermissionResult | null> {
-  if (toolUseContext.getAppState().toolPermissionContext.mode !== "plan") return null
+  if (tool.name !== "EnterPlanMode") return null
 
   let parsedInput: { [key: string]: unknown }
   try {
@@ -222,19 +285,60 @@ async function checkPlanPermission(
     return null
   }
 
+  const ruleResult = await checkRuleBasedPermissions(tool, parsedInput, toolUseContext)
+  if (ruleResult?.behavior === "deny") return ruleResult
+  if (ruleResult !== null) {
+    options?.onForcePrompt?.()
+    return null
+  }
+
+  const result = await runEnginePermissionCheck(tool, parsedInput, toolUseContext)
+  return result.behavior === "allow" ? result : null
+}
+
+export async function checkPlanPermission(
+  tool: Tool,
+  input: unknown,
+  toolUseContext: ToolUseContext,
+  messages: readonly unknown[],
+  tools: Tools,
+  agents: readonly AgentDefinition[],
+  options?: PermissionPromptOptions,
+): Promise<PermissionResult | null> {
+  const isExitPlanMode = tool.name === "ExitPlanMode"
   if (
-    tool.requiresUserInteraction?.() ||
-    tool.isMcp === true ||
-    tool.name === "Agent" ||
-    tool.name === "WebFetch" ||
-    tool.name === "WebSearch" ||
-    !tool.isReadOnly(parsedInput)
+    toolUseContext.getAppState().toolPermissionContext.mode !== "plan" &&
+    !(isExitPlanMode && isTeammate())
   ) {
     return null
   }
 
+  let parsedInput: { [key: string]: unknown }
+  try {
+    parsedInput = tool.inputSchema.parse(input) as { [key: string]: unknown }
+  } catch {
+    return null
+  }
+
+  const isSafeAgent = tool.name === "Agent" && isPlanSafeAgent(parsedInput, agents)
+
   const ruleResult = await checkRuleBasedPermissions(tool, parsedInput, toolUseContext)
-  if (ruleResult !== null) return null
+  if (ruleResult?.behavior === "deny") return ruleResult
+  if (ruleResult !== null) {
+    options?.onForcePrompt?.()
+    return null
+  }
+
+  if (
+    tool.requiresUserInteraction?.() ||
+    tool.isMcp === true ||
+    (tool.name === "Agent" && !isSafeAgent) ||
+    tool.name === "WebFetch" ||
+    tool.name === "WebSearch" ||
+    (!isExitPlanMode && !tool.isReadOnly(parsedInput))
+  ) {
+    return null
+  }
 
   const planResult = await runEnginePermissionCheck(
     tool,
@@ -242,6 +346,12 @@ async function checkPlanPermission(
     planPermissionContext(toolUseContext),
   )
   if (planResult.behavior !== "allow") return null
+
+  // These tools have already passed their own rule and workspace checks. Avoid
+  // a model-based audit for basic local exploration; a classifier failure would
+  // otherwise turn every Read/Grep/Glob call into an interactive permission.
+  if (isExitPlanMode || isSafeAgent || isPlanSafeToolInput(tool, parsedInput)) return planResult
+  if (isPlanModeAllowlistedTool(tool.name)) return null
 
   const auditResult = await classifyYoloAction(
     messages as Message[],
@@ -314,6 +424,36 @@ function denyAllResolver(): PermissionResult {
   return {
     behavior: "deny",
     message: "no permission resolver configured (Task 4 wires the bridge)",
+  }
+}
+
+export function permissionContextForModeChange(
+  context: ToolPermissionContext,
+  mode: PermissionMode,
+  options?: PermissionModeChangeOptions,
+): ToolPermissionContext {
+  const current = context.mode
+  const source = options?.source ?? "automatic"
+  if (mode === current) {
+    if (mode !== "plan") return context
+    return {
+      ...context,
+      planExitApprovalRequired: source === "manual",
+    }
+  }
+  if (mode === "plan") {
+    return {
+      ...context,
+      mode,
+      prePlanMode: current,
+      planExitApprovalRequired: source === "manual",
+    }
+  }
+  return {
+    ...context,
+    mode,
+    prePlanMode: current === "plan" ? undefined : context.prePlanMode,
+    planExitApprovalRequired: undefined,
   }
 }
 
@@ -401,13 +541,28 @@ export async function createWrenEngine(options?: CreateWrenEngineOptions): Promi
 
   const internalCanUseTool: InternalCanUseTool = async (tool, input, toolUseContext) => {
     if (resolver !== null) {
+      const promptState = { forcePrompt: false }
+      const promptOptions: PermissionPromptOptions = {
+        onForcePrompt: () => {
+          promptState.forcePrompt = true
+        },
+      }
       if (tool !== undefined && isToolUseContext(toolUseContext)) {
+        const enterPlanResult = await checkEnterPlanPermission(
+          tool,
+          input,
+          toolUseContext,
+          promptOptions,
+        )
+        if (enterPlanResult !== null) return enterPlanResult
         const planResult = await checkPlanPermission(
           tool,
           input,
           toolUseContext,
           engine.getMessages(),
           tools,
+          agents,
+          promptOptions,
         )
         if (planResult !== null) return planResult
         const autoResult = await checkAutoPermission(
@@ -418,14 +573,57 @@ export async function createWrenEngine(options?: CreateWrenEngineOptions): Promi
           tools,
         )
         if (autoResult !== null) return autoResult
+
+        // Subagents launched from a plan-mode parent run with their own
+        // resolved mode (runAgent's agentGetAppState), so the plan guard above
+        // sees a non-plan mode and skips. Re-evaluate with the parent's plan
+        // view: plan-safe workspace reads keep their auto-allow, while
+        // sensitive reads and everything else fall through to the resolver,
+        // which decides using the subagent's effective mode.
+        const sessionMode = appState.toolPermissionContext.mode
+        const contextMode = toolUseContext.getAppState().toolPermissionContext.mode
+        if (sessionMode === "plan" && contextMode !== "plan") {
+          const planViewContext: ToolUseContext = {
+            ...toolUseContext,
+            getAppState: () => {
+              const subagentState = toolUseContext.getAppState()
+              return {
+                ...subagentState,
+                toolPermissionContext: {
+                  ...subagentState.toolPermissionContext,
+                  mode: sessionMode,
+                },
+              }
+            },
+          }
+          const planViewResult = await checkPlanPermission(
+            tool,
+            input,
+            planViewContext,
+            engine.getMessages(),
+            tools,
+            agents,
+            promptOptions,
+          )
+          if (planViewResult !== null) return planViewResult
+        }
       }
       const toolName = tool?.name ?? "unknown"
       const shouldAvoid =
         toolUseContext?.getAppState?.()?.toolPermissionContext?.shouldAvoidPermissionPrompts
+      const effectiveMode =
+        isToolUseContext(toolUseContext) && tool !== undefined
+          ? toolUseContext.getAppState().toolPermissionContext.mode
+          : undefined
+      const resolverContext = {
+        ...(shouldAvoid !== undefined && { shouldAvoidPermissionPrompts: shouldAvoid }),
+        ...(promptState.forcePrompt && { forcePrompt: true }),
+        ...(effectiveMode !== undefined && { mode: effectiveMode }),
+      }
       return resolver(
         toolName,
         input,
-        shouldAvoid !== undefined ? { shouldAvoidPermissionPrompts: shouldAvoid } : undefined,
+        Object.keys(resolverContext).length > 0 ? resolverContext : undefined,
       )
     }
     return denyAllResolver()
@@ -494,27 +692,13 @@ export async function createWrenEngine(options?: CreateWrenEngineOptions): Promi
       if (options?.canUseTool !== undefined) return
       resolver = next
     },
-    setPermissionMode(mode: string): void {
+    setPermissionMode(mode: string, options?: PermissionModeChangeOptions): void {
       syncingFromAdapter = true
-      const current = appState.toolPermissionContext.mode
-      if (mode !== current) {
-        const tc = appState.toolPermissionContext
-        if (mode === "plan" && current !== "plan") {
-          appState.toolPermissionContext = {
-            ...tc,
-            mode: mode as PermissionMode,
-            prePlanMode: current as PermissionMode,
-          }
-        } else if (mode !== "plan" && current === "plan") {
-          appState.toolPermissionContext = {
-            ...tc,
-            mode: mode as PermissionMode,
-            prePlanMode: undefined,
-          }
-        } else {
-          appState.toolPermissionContext = { ...tc, mode: mode as PermissionMode }
-        }
-      }
+      appState.toolPermissionContext = permissionContextForModeChange(
+        appState.toolPermissionContext,
+        mode as PermissionMode,
+        options,
+      )
       syncingFromAdapter = false
     },
     setPermissionModeChangeCallback(callback: ((mode: string) => void) | null): void {
@@ -613,13 +797,28 @@ export async function createWrenEngineFactory(
 
     const internalCanUseTool: InternalCanUseTool = async (tool, input, toolUseContext) => {
       if (resolver !== null) {
+        const promptState = { forcePrompt: false }
+        const promptOptions: PermissionPromptOptions = {
+          onForcePrompt: () => {
+            promptState.forcePrompt = true
+          },
+        }
         if (tool !== undefined && isToolUseContext(toolUseContext)) {
+          const enterPlanResult = await checkEnterPlanPermission(
+            tool,
+            input,
+            toolUseContext,
+            promptOptions,
+          )
+          if (enterPlanResult !== null) return enterPlanResult
           const planResult = await checkPlanPermission(
             tool,
             input,
             toolUseContext,
             engine.getMessages(),
             sessionTools,
+            agents,
+            promptOptions,
           )
           if (planResult !== null) return planResult
           const autoResult = await checkAutoPermission(
@@ -630,14 +829,58 @@ export async function createWrenEngineFactory(
             sessionTools,
           )
           if (autoResult !== null) return autoResult
+
+          // Subagents launched from a plan-mode parent run with their own
+          // resolved mode (runAgent's agentGetAppState), so the plan guard
+          // above sees a non-plan mode and skips. Re-evaluate with the
+          // parent's plan view: plan-safe workspace reads keep their
+          // auto-allow, while sensitive reads and everything else fall
+          // through to the resolver, which decides using the subagent's
+          // effective mode.
+          const sessionMode = appState.toolPermissionContext.mode
+          const contextMode = toolUseContext.getAppState().toolPermissionContext.mode
+          if (sessionMode === "plan" && contextMode !== "plan") {
+            const planViewContext: ToolUseContext = {
+              ...toolUseContext,
+              getAppState: () => {
+                const subagentState = toolUseContext.getAppState()
+                return {
+                  ...subagentState,
+                  toolPermissionContext: {
+                    ...subagentState.toolPermissionContext,
+                    mode: sessionMode,
+                  },
+                }
+              },
+            }
+            const planViewResult = await checkPlanPermission(
+              tool,
+              input,
+              planViewContext,
+              engine.getMessages(),
+              sessionTools,
+              agents,
+              promptOptions,
+            )
+            if (planViewResult !== null) return planViewResult
+          }
         }
         const toolName = tool?.name ?? "unknown"
         const shouldAvoid =
           toolUseContext?.getAppState?.()?.toolPermissionContext?.shouldAvoidPermissionPrompts
+        const effectiveMode =
+          isToolUseContext(toolUseContext) && tool !== undefined
+            ? toolUseContext.getAppState().toolPermissionContext.mode
+            : undefined
+        const resolverContext = {
+          ...(shouldAvoid !== undefined && { shouldAvoidPermissionPrompts: shouldAvoid }),
+          ...(promptState.forcePrompt && { forcePrompt: true }),
+          ...(effectiveMode !== undefined && { mode: effectiveMode }),
+        }
         return resolver(
           toolName,
           input,
-          shouldAvoid !== undefined ? { shouldAvoidPermissionPrompts: shouldAvoid } : undefined,
+          Object.keys(resolverContext).length > 0 ? resolverContext : undefined,
         )
       }
       return denyAllResolver()
@@ -737,27 +980,13 @@ export async function createWrenEngineFactory(
         if (options?.canUseTool !== undefined) return
         resolver = next
       },
-      setPermissionMode(mode: string) {
+      setPermissionMode(mode: string, options?: PermissionModeChangeOptions) {
         syncingFromAdapter = true
-        const current = appState.toolPermissionContext.mode
-        if (mode !== current) {
-          const tc = appState.toolPermissionContext
-          if (mode === "plan" && current !== "plan") {
-            appState.toolPermissionContext = {
-              ...tc,
-              mode: mode as PermissionMode,
-              prePlanMode: current as PermissionMode,
-            }
-          } else if (mode !== "plan" && current === "plan") {
-            appState.toolPermissionContext = {
-              ...tc,
-              mode: mode as PermissionMode,
-              prePlanMode: undefined,
-            }
-          } else {
-            appState.toolPermissionContext = { ...tc, mode: mode as PermissionMode }
-          }
-        }
+        appState.toolPermissionContext = permissionContextForModeChange(
+          appState.toolPermissionContext,
+          mode as PermissionMode,
+          options,
+        )
         syncingFromAdapter = false
       },
       setPermissionModeChangeCallback(callback: ((mode: string) => void) | null) {

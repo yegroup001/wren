@@ -6,11 +6,19 @@ import { loadModelRegistry, setWrenConfigHomeForTests } from "@wren/config-node"
 import type {
   CompactProgressEvent,
   PermissionResolver,
+  PermissionResolverContext,
   SDKMessage,
   WrenEngine,
   WrenEngineFactory,
 } from "@wren/engine"
-import { clearGoal, createWrenEngine, EngineHistorySnapshot, getGoal, setConfigForTests, setGoal } from "@wren/engine"
+import {
+  clearGoal,
+  createWrenEngine,
+  EngineHistorySnapshot,
+  getGoal,
+  setConfigForTests,
+  setGoal,
+} from "@wren/engine"
 import { parseMessageId, parsePartId, parseSessionId, type SessionId } from "@wren/protocol"
 import { createMemorySessionStore, type SessionStore } from "@wren/storage"
 import { createComputed, createRoot } from "solid-js"
@@ -65,7 +73,13 @@ async function json(adapter: WrenAdapter, path: string, init?: RequestInit): Pro
 
 type FakeBehavior =
   | { readonly kind: "text"; readonly text: string }
-  | { readonly kind: "askPermission"; readonly toolName: string; readonly input: unknown }
+  | {
+      readonly kind: "askPermission"
+      readonly toolName: string
+      readonly input: unknown
+      readonly forcePrompt?: boolean
+      readonly resolverContext?: PermissionResolverContext
+    }
   | { readonly kind: "askPermissionTwice"; readonly toolName: string; readonly input: unknown }
 
 type PermissionDecision = Awaited<ReturnType<PermissionResolver>>
@@ -74,6 +88,10 @@ class FakeWrenEngine implements WrenEngine {
   readonly submitMessageCalls: string[] = []
   readonly permissionDecisions: PermissionDecision[] = []
   readonly permissionModes: string[] = []
+  readonly permissionModeChanges: Array<{
+    readonly mode: string
+    readonly source?: "manual" | "automatic"
+  }> = []
   interruptCalled = false
   resetCalled = false
   private resolver: PermissionResolver | null = null
@@ -93,7 +111,16 @@ class FakeWrenEngine implements WrenEngine {
     if (this.behavior.kind === "askPermission" || this.behavior.kind === "askPermissionTwice") {
       if (this.resolver !== null) {
         this.permissionDecisions.push(
-          await this.resolver(this.behavior.toolName, this.behavior.input),
+          await this.resolver(
+            this.behavior.toolName,
+            this.behavior.input,
+            this.behavior.kind === "askPermission"
+              ? {
+                  ...(this.behavior.forcePrompt && { forcePrompt: true }),
+                  ...(this.behavior.resolverContext !== undefined && this.behavior.resolverContext),
+                }
+              : undefined,
+          ),
         )
       }
       if (this.behavior.kind === "askPermissionTwice" && this.resolver !== null) {
@@ -121,8 +148,9 @@ class FakeWrenEngine implements WrenEngine {
   setPermissionResolver(resolver: PermissionResolver | null): void {
     this.resolver = resolver
   }
-  setPermissionMode(mode: string): void {
+  setPermissionMode(mode: string, options?: { readonly source?: "manual" | "automatic" }): void {
     this.permissionModes.push(mode)
+    this.permissionModeChanges.push({ mode, ...(options?.source && { source: options.source }) })
   }
   setPermissionModeChangeCallback(callback: ((mode: string) => void) | null): void {
     this.permissionModeChangeCallback = callback
@@ -647,7 +675,6 @@ describe("local adapter — in-process fetch routes", () => {
     dispose()
   })
 
-
   test("clearing a session clears its active goal", async () => {
     const sessionStore = createMemorySessionStore()
     const goalEngine = new GoalPersistenceFakeEngine()
@@ -682,7 +709,9 @@ describe("local adapter — in-process fetch routes", () => {
     goalEngine.releaseGoalTurn()
     await adapter.waitForIdle(sessionId)
 
-    const clearResponse = await adapter.fetch(request(`/session/${session.id}/clear`, { method: "POST" }))
+    const clearResponse = await adapter.fetch(
+      request(`/session/${session.id}/clear`, { method: "POST" }),
+    )
     expect(clearResponse.status).toBe(200)
     expect(getGoal(engineSessionId)).toBeNull()
 
@@ -742,7 +771,9 @@ describe("local adapter — in-process fetch routes", () => {
         body: JSON.stringify({ action: "pause" }),
       }),
     )
-    expect(await loadPersistedGoal(sessionStore, sessionId, engineSessionId)).toMatchObject({ status: "paused" })
+    expect(await loadPersistedGoal(sessionStore, sessionId, engineSessionId)).toMatchObject({
+      status: "paused",
+    })
 
     await adapter.fetch(
       request(`/session/${session.id}/goal`, {
@@ -750,7 +781,9 @@ describe("local adapter — in-process fetch routes", () => {
         body: JSON.stringify({ action: "resume" }),
       }),
     )
-    expect(await loadPersistedGoal(sessionStore, sessionId, engineSessionId)).toMatchObject({ status: "active" })
+    expect(await loadPersistedGoal(sessionStore, sessionId, engineSessionId)).toMatchObject({
+      status: "active",
+    })
 
     await adapter.fetch(
       request(`/session/${session.id}/goal`, {
@@ -758,7 +791,9 @@ describe("local adapter — in-process fetch routes", () => {
         body: JSON.stringify({ action: "complete" }),
       }),
     )
-    expect(await loadPersistedGoal(sessionStore, sessionId, engineSessionId)).toMatchObject({ status: "complete" })
+    expect(await loadPersistedGoal(sessionStore, sessionId, engineSessionId)).toMatchObject({
+      status: "complete",
+    })
 
     await adapter.fetch(
       request(`/session/${session.id}/goal`, {
@@ -1048,7 +1083,9 @@ describe("local adapter — in-process fetch routes", () => {
     // Immediately clear — the fire-and-forget persistSession from the prompt
     // completion must be serialized *before* the clear's full save, otherwise
     // the stale save would restore the deleted messages.
-    const clearRes = await adapter.fetch(request(`/session/${session.id}/clear`, { method: "POST" }))
+    const clearRes = await adapter.fetch(
+      request(`/session/${session.id}/clear`, { method: "POST" }),
+    )
     expect(clearRes.status).toBe(200)
 
     // Wait a tick to let any un-serialized save settle.
@@ -1409,6 +1446,128 @@ describe("local adapter — in-process fetch routes", () => {
     dispose()
   })
 
+  test("subagent acceptEdits mode auto-allows file edits even under a plan-mode session", async () => {
+    // Given: a plan-mode session and a subagent tool call that resolves its
+    // own mode to acceptEdits (engine passes it in the resolver context).
+    const { adapter, engine, dispose } = setup({
+      kind: "askPermission",
+      toolName: "Edit",
+      input: { file_path: "/tmp/project/a.ts", old_string: "a", new_string: "b" },
+      resolverContext: { mode: "acceptEdits" },
+    })
+    const session = await createSession(adapter, "/tmp/project", "plan")
+    const sessionId = parseSessionId(session.id)
+
+    // When: the subagent's Edit call reaches the permission resolver.
+    await adapter.fetch(
+      request(`/session/${session.id}/message`, {
+        method: "POST",
+        body: JSON.stringify({ prompt: "edit the file" }),
+      }),
+    )
+    await adapter.waitForIdle(sessionId)
+
+    // Then: the resolver honors the subagent's acceptEdits mode.
+    expect(engine.permissionDecisions).toEqual([{ behavior: "allow" }])
+    expect(adapter.state.getBundle(sessionId)?.permissions).toEqual([])
+
+    dispose()
+  })
+
+  test("plan-mode session does not auto-allow subagent read-only tools via acceptEdits context", async () => {
+    // Given: a plan-mode session and a subagent Read call. Safe workspace
+    // reads are auto-allowed by the engine's plan check before the resolver;
+    // anything reaching the resolver (e.g. sensitive paths) must still prompt.
+    const { adapter, dispose } = setup({
+      kind: "askPermission",
+      toolName: "Read",
+      input: { file_path: "/tmp/project/.env" },
+      resolverContext: { mode: "acceptEdits" },
+    })
+    const session = await createSession(adapter, "/tmp/project", "plan")
+    const sessionId = parseSessionId(session.id)
+
+    await adapter.fetch(
+      request(`/session/${session.id}/message`, {
+        method: "POST",
+        body: JSON.stringify({ prompt: "read the file" }),
+      }),
+    )
+    const permissionId = await waitForPermission(adapter.state, sessionId)
+    expect(adapter.state.getBundle(sessionId)?.permissions).toHaveLength(1)
+
+    const reply = await adapter.fetch(
+      request(`/session/${session.id}/permission/${permissionId}`, {
+        method: "POST",
+        body: JSON.stringify({ response: "once" }),
+      }),
+    )
+    await adapter.waitForIdle(sessionId)
+    expect(reply.status).toBe(200)
+
+    dispose()
+  })
+
+  test("subagent acceptEdits mode auto-allows read-only tools outside plan sessions", async () => {
+    // Given: a default-mode session and a subagent Read call with its own
+    // acceptEdits mode — read-only tools auto-allow like the main session.
+    const { adapter, engine, dispose } = setup({
+      kind: "askPermission",
+      toolName: "Read",
+      input: { file_path: "/tmp/project/src/main.ts" },
+      resolverContext: { mode: "acceptEdits" },
+    })
+    const session = await createSession(adapter, "/tmp/project", "default")
+    const sessionId = parseSessionId(session.id)
+
+    await adapter.fetch(
+      request(`/session/${session.id}/message`, {
+        method: "POST",
+        body: JSON.stringify({ prompt: "read the file" }),
+      }),
+    )
+    await adapter.waitForIdle(sessionId)
+
+    expect(engine.permissionDecisions).toEqual([{ behavior: "allow" }])
+    expect(adapter.state.getBundle(sessionId)?.permissions).toEqual([])
+
+    dispose()
+  })
+
+  test("explicit ask rules force a prompt even in full mode", async () => {
+    const { adapter, engine, dispose } = setup({
+      kind: "askPermission",
+      toolName: "EnterPlanMode",
+      input: {},
+      forcePrompt: true,
+    })
+    const session = await createSession(adapter, "/tmp/project", "full")
+    const sessionId = parseSessionId(session.id)
+
+    await adapter.fetch(
+      request(`/session/${session.id}/message`, {
+        method: "POST",
+        body: JSON.stringify({ prompt: "enter plan mode" }),
+      }),
+    )
+    const permissionId = await waitForPermission(adapter.state, sessionId)
+    expect(adapter.state.getBundle(sessionId)?.permissions).toHaveLength(1)
+
+    const reply = await adapter.fetch(
+      request(`/session/${session.id}/permission/${permissionId}`, {
+        method: "POST",
+        body: JSON.stringify({ response: "once" }),
+      }),
+    )
+    await adapter.waitForIdle(sessionId)
+
+    expect(reply.status).toBe(200)
+    expect(engine.permissionDecisions).toEqual([{ behavior: "allow" }])
+    expect(adapter.state.getBundle(sessionId)?.permissions).toEqual([])
+
+    dispose()
+  })
+
   test("updates an existing session permission mode to full", async () => {
     // Given: a default-mode session and an engine that asks for tool permission.
     const { adapter, engine, dispose } = setup({
@@ -1483,6 +1642,10 @@ describe("local adapter — in-process fetch routes", () => {
 
     expect(updateResponse.status).toBe(200)
     expect(sessionEngine.permissionModes).toEqual(["default", "auto"])
+    expect(sessionEngine.permissionModeChanges).toEqual([
+      { mode: "default", source: "automatic" },
+      { mode: "auto", source: "automatic" },
+    ])
     expect(adapter.state.getSession(sessionId)?.permissionMode).toBe("auto")
     expect(await sessionStore.load(sessionId)).toMatchObject({
       ok: true,
@@ -1497,6 +1660,22 @@ describe("local adapter — in-process fetch routes", () => {
     expect(adapter.state.getSession(sessionId)?.permissionMode).toBe("auto")
     await waitForPersistedPermissionMode(sessionStore, sessionId, "auto")
 
+    dispose()
+  })
+
+  test("forwards manual plan entry to the session engine", async () => {
+    const { adapter, engine, dispose } = setup({ kind: "text", text: "ready" })
+    const session = await createSession(adapter)
+
+    const response = await adapter.fetch(
+      request(`/session/${session.id}/permission-mode`, {
+        method: "POST",
+        body: JSON.stringify({ permissionMode: "plan", source: "manual" }),
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    expect(engine.permissionModeChanges).toEqual([{ mode: "plan", source: "manual" }])
     dispose()
   })
 

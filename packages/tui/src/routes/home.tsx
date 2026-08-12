@@ -269,6 +269,7 @@ export function Home(): JSX.Element {
         cwd: local.cwd(),
         modelId: local.model(),
         permissionMode: permissionMode(),
+        permissionModeSource: permissionMode() === "plan" ? "manual" : "automatic",
         effort: effort(),
       }
       const res = await adapter.fetch(

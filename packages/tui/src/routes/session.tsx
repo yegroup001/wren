@@ -127,7 +127,7 @@ export function Session(props: { sessionId: string }): JSX.Element {
       createWrenRequest(`/session/${props.sessionId}/permission-mode`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ permissionMode: next }),
+        body: JSON.stringify({ permissionMode: next, source: "manual" }),
       }),
     )
     toast.show({
@@ -427,7 +427,14 @@ export function Session(props: { sessionId: string }): JSX.Element {
   return (
     <box flexDirection="row" flexGrow={1} minHeight={0} gap={0}>
       <box flexDirection="column" flexGrow={1} minWidth={0} gap={0}>
-        <box flexGrow={1} minHeight={0} border borderStyle="single" borderColor={theme().border} overflow="hidden">
+        <box
+          flexGrow={1}
+          minHeight={0}
+          border
+          borderStyle="single"
+          borderColor={theme().border}
+          overflow="hidden"
+        >
           <Transcript
             sessionId={props.sessionId}
             modalActive={modalActive}

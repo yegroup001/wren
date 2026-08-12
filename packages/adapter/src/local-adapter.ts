@@ -8,6 +8,7 @@ import type {
   EngineHistorySnapshot,
   GoalState,
   PermissionResolver,
+  PermissionResolverContext,
   WrenEngine,
   WrenEngineFactory,
 } from "@wren/engine"
@@ -153,9 +154,19 @@ type EditTransactionSnapshot = {
   readonly fileRollback?: FileRollbackRecord
 }
 
-const FILE_ROLLBACK_TOOLS = new Set(["edit", "fileedittool", "write", "filewritetool", "notebookedit", "notebookedittool"])
+const FILE_ROLLBACK_TOOLS = new Set([
+  "edit",
+  "fileedittool",
+  "write",
+  "filewritetool",
+  "notebookedit",
+  "notebookedittool",
+])
 
-function collectFileRollbackFiles(messages: readonly Message[], startIndex: number): FileRollbackFile[] {
+function collectFileRollbackFiles(
+  messages: readonly Message[],
+  startIndex: number,
+): FileRollbackFile[] {
   const files = new Map<string, FileRollbackFile>()
   for (const message of messages.slice(startIndex)) {
     if (message.role !== "assistant") continue
@@ -201,7 +212,11 @@ function rollbackFromMessages(
   return files.length === 0 ? undefined : { baselineMessageId: editMessageId, files }
 }
 
-function rollbackFailureMessage(result: { status: "conflict" | "unavailable"; conflictedPaths?: string[]; reason?: string }): string {
+function rollbackFailureMessage(result: {
+  status: "conflict" | "unavailable"
+  conflictedPaths?: string[]
+  reason?: string
+}): string {
   if (result.status === "conflict") {
     return `filesystem rollback conflict: ${(result.conflictedPaths ?? []).join(", ")}`
   }
@@ -315,6 +330,7 @@ export function createWrenAdapter(engine: WrenEngine, options?: WrenAdapterOptio
   const sessionRuntimes = new Map<string, SessionRuntime>()
   const userMessageEngineCounts = new Map<string, number>()
   const compactEditSnapshots = new Map<string, CompactEditSnapshot>()
+  const manualPlanSessions = new Set<string>()
   const compactCallbackEngines = new WeakSet<WrenEngine>()
   const loadedMessageSessions = new Set<string>()
   const loadingMessageSessions = new Map<string, Promise<void>>()
@@ -327,10 +343,7 @@ export function createWrenAdapter(engine: WrenEngine, options?: WrenAdapterOptio
    * another full save. Each write waits for the previous one to finish
    * before reading store state and writing.
    */
-  function serializedPersist(
-    sessionId: SessionId,
-    write: () => Promise<void>,
-  ): Promise<void> {
+  function serializedPersist(sessionId: SessionId, write: () => Promise<void>): Promise<void> {
     const prev = persistQueues.get(sessionId) ?? Promise.resolve()
     const next = prev.then(write, write)
     persistQueues.set(
@@ -722,14 +735,18 @@ export function createWrenAdapter(engine: WrenEngine, options?: WrenAdapterOptio
       sessionEngine.setPermissionResolver(createStoreResolver(sessionId))
     }
     runtime.engine = sessionEngine
-    // Sync session's permissionMode to engine's toolPermissionContext.mode
+    // Sync session's permissionMode to engine's toolPermissionContext.mode.
+    // Only an explicit TUI mode selection creates a plan-exit approval boundary.
     const session = state.getSession(sessionId)
     if (session?.permissionMode) {
-      sessionEngine.setPermissionMode?.(session.permissionMode)
+      sessionEngine.setPermissionMode?.(session.permissionMode, {
+        source: manualPlanSessions.has(sessionId) ? "manual" : "automatic",
+      })
     }
     // Register callback: when engine mode changes internally (EnterPlanMode/ExitPlanMode tools),
     // sync back to session.permissionMode so resolver and TUI see the change.
     sessionEngine.setPermissionModeChangeCallback?.((mode: string) => {
+      manualPlanSessions.delete(sessionId)
       const currentSession = state.getSession(sessionId)
       if (currentSession?.permissionMode !== mode) {
         projectSessionPermissionMode(state, app, sessionId, mode)
@@ -756,7 +773,7 @@ export function createWrenAdapter(engine: WrenEngine, options?: WrenAdapterOptio
     return async (
       toolName: string,
       input: unknown,
-      context?: { shouldAvoidPermissionPrompts?: boolean },
+      context?: PermissionResolverContext,
     ): Promise<PermissionOutcome> => {
       const sessionId = resolvedSessionId ?? getActiveSessionForResolver()
       if (sessionId === null) {
@@ -777,16 +794,23 @@ export function createWrenAdapter(engine: WrenEngine, options?: WrenAdapterOptio
         return askUserQuestion(sessionId, input)
       }
       const session = state.getSession(sessionId)
-      if (session?.permissionMode === "full") {
+      const sessionMode = session?.permissionMode
+      // Subagents resolve their own mode (runAgent); prefer it over the
+      // session mode. Safe workspace reads under a plan-mode parent are
+      // auto-allowed by the engine's plan check, so the resolver only
+      // auto-allows read-only tools when the session is not in plan mode.
+      const effectiveMode = context?.mode ?? sessionMode
+      if (!context?.forcePrompt && effectiveMode === "full") {
         return { behavior: "allow" }
       }
       if (
-        session?.permissionMode === "acceptEdits" &&
-        (isReadOnlyTool(toolName) || isFileEditTool(toolName))
+        !context?.forcePrompt &&
+        effectiveMode === "acceptEdits" &&
+        (isFileEditTool(toolName) || (isReadOnlyTool(toolName) && sessionMode !== "plan"))
       ) {
         return { behavior: "allow" }
       }
-      if (sessionAllowSet.has(sessionAllowKey(sessionId, toolName))) {
+      if (!context?.forcePrompt && sessionAllowSet.has(sessionAllowKey(sessionId, toolName))) {
         return { behavior: "allow" }
       }
       const requestId = parsePermissionId(`perm_${randomUUID()}`)
@@ -896,6 +920,9 @@ export function createWrenAdapter(engine: WrenEngine, options?: WrenAdapterOptio
       permissionMode: payload.permissionMode ?? "default",
       effort,
     }
+    if (session.permissionMode === "plan" && payload.permissionModeSource === "manual") {
+      manualPlanSessions.add(session.id)
+    }
     projectSessionCreation(state, app, session)
     // A freshly created session is authoritative in memory — no need to
     // load from DB before persisting. Without this, persistSession would
@@ -1001,8 +1028,7 @@ export function createWrenAdapter(engine: WrenEngine, options?: WrenAdapterOptio
           sessionId,
           editMessageId,
         )
-        const rollbackSourceMessages =
-          coveringSnapshot?.snapshot.messages ?? bundle.messages
+        const rollbackSourceMessages = coveringSnapshot?.snapshot.messages ?? bundle.messages
         const rollbackStartIndex =
           coveringSnapshot === undefined
             ? editIdx + 1
@@ -1521,11 +1547,16 @@ export function createWrenAdapter(engine: WrenEngine, options?: WrenAdapterOptio
   async function setSessionPermissionMode(sessionId: SessionId, body: unknown): Promise<Response> {
     if (state.getSession(sessionId) === undefined)
       return notFound("session_not_found", `session not found: ${sessionId}`)
-    const permissionMode = parsePermissionModeBody(body)
+    const { permissionMode, source } = parsePermissionModeBody(body)
+    if (permissionMode === "plan" && source === "manual") {
+      manualPlanSessions.add(sessionId)
+    } else {
+      manualPlanSessions.delete(sessionId)
+    }
     projectSessionPermissionMode(state, app, sessionId, permissionMode)
     // Sync to engine's toolPermissionContext.mode
     const engine = getEngine(sessionId)
-    engine.setPermissionMode?.(permissionMode)
+    engine.setPermissionMode?.(permissionMode, { source })
     await persistSessionMeta(sessionId)
     return json({ ok: true, permissionMode })
   }
@@ -1834,7 +1865,9 @@ export function createWrenAdapter(engine: WrenEngine, options?: WrenAdapterOptio
     // (prevents stale plan mode from EnterPlanMode tool lingering after /clear)
     const session = state.getSession(sessionId)
     if (session?.permissionMode) {
-      engine.setPermissionMode?.(session.permissionMode)
+      engine.setPermissionMode?.(session.permissionMode, {
+        source: manualPlanSessions.has(sessionId) ? "manual" : "automatic",
+      })
     }
     // clearSession must do a full save (DELETE + rewrite) to remove all messages.
     // Don't use persistSession — its guard would see store messages < db messages
@@ -1990,6 +2023,7 @@ export function createWrenAdapter(engine: WrenEngine, options?: WrenAdapterOptio
       if (snapshot.sessionId === sessionId) compactEditSnapshots.delete(messageId)
     }
     loadedMessageSessions.delete(sessionId)
+    manualPlanSessions.delete(sessionId)
     loadingMessageSessions.delete(sessionId)
     pendingEngineSnapshots.delete(sessionId)
     engineSessionIds.delete(sessionId)

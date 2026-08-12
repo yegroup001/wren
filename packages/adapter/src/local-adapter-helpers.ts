@@ -9,7 +9,15 @@ export type CreateSessionBody = {
   readonly cwd: string
   readonly modelId?: string | undefined
   readonly permissionMode?: string | undefined
+  readonly permissionModeSource?: PermissionModeChangeSource | undefined
   readonly effort?: Session["effort"]
+}
+
+export type PermissionModeChangeSource = "manual" | "automatic"
+
+export type PermissionModeChange = {
+  readonly permissionMode: string
+  readonly source: PermissionModeChangeSource
 }
 
 export function json(body: unknown, status = 200): Response {
@@ -77,11 +85,13 @@ export function parseCreateSessionBody(body: unknown): CreateSessionBody {
   ) {
     throw new AdapterPayloadError("effort must be default|low|medium|high|xhigh|max")
   }
+  const permissionModeSource = parsePermissionModeSource(record.permissionModeSource)
   return {
     cwd,
     modelId: typeof record.modelId === "string" ? (record.modelId as string) : undefined,
     permissionMode:
       typeof record.permissionMode === "string" ? (record.permissionMode as string) : undefined,
+    ...(permissionModeSource !== undefined && { permissionModeSource }),
     effort: effort as Session["effort"],
   }
 }
@@ -135,15 +145,25 @@ export function parseModelBody(body: unknown): ModelBody {
   return { modelId, reasoning }
 }
 
-export function parsePermissionModeBody(body: unknown): string {
+export function parsePermissionModeSource(value: unknown): PermissionModeChangeSource | undefined {
+  if (value === undefined) return undefined
+  if (value === "manual" || value === "automatic") return value
+  throw new AdapterPayloadError("permissionModeSource must be manual|automatic")
+}
+
+export function parsePermissionModeBody(body: unknown): PermissionModeChange {
   if (body === null || typeof body !== "object") {
     throw new AdapterPayloadError("invalid permission mode body")
   }
-  const permissionMode = (body as Record<string, unknown>).permissionMode
+  const record = body as Record<string, unknown>
+  const permissionMode = record.permissionMode
   if (typeof permissionMode !== "string" || permissionMode === "") {
     throw new AdapterPayloadError("permissionMode is required")
   }
-  return permissionMode
+  return {
+    permissionMode,
+    source: parsePermissionModeSource(record.source) ?? "automatic",
+  }
 }
 
 export function parsePermissionReply(body: unknown): PermissionReply {

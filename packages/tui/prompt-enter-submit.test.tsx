@@ -232,6 +232,7 @@ describe("Wren TUI prompt Enter submit", () => {
           cwd: process.cwd(),
           modelId: "glm-5.2",
           permissionMode: "auto",
+          permissionModeSource: "automatic",
           effort: "default",
         }),
       },
@@ -282,7 +283,7 @@ describe("Wren TUI prompt Enter submit", () => {
     await setup.flush()
 
     expect(requests).toEqual([])
-    expect(setup.captureCharFrame()).toContain("perm: edits")
+    expect(setup.captureCharFrame()).toContain("ACCEPT EDITS")
     setup.renderer.destroy()
   })
 
@@ -315,7 +316,7 @@ describe("Wren TUI prompt Enter submit", () => {
     expect(requests).toContainEqual({
       method: "POST",
       path: `/session/${SESSION_ID}/permission-mode`,
-      body: JSON.stringify({ permissionMode: "plan" }),
+      body: JSON.stringify({ permissionMode: "plan", source: "manual" }),
     })
     setup.renderer.destroy()
   })
@@ -350,6 +351,7 @@ describe("Wren TUI prompt Enter submit", () => {
           cwd: process.cwd(),
           modelId: "glm-5.2",
           permissionMode: "auto",
+          permissionModeSource: "automatic",
           effort: "default",
         }),
       })
@@ -392,6 +394,7 @@ describe("Wren TUI prompt Enter submit", () => {
         cwd: process.cwd(),
         modelId: "glm-5.2",
         permissionMode: "acceptEdits",
+        permissionModeSource: "automatic",
         effort: "high",
       }),
     })
@@ -552,7 +555,7 @@ describe("Wren TUI prompt Enter submit", () => {
       {
         method: "POST",
         path: `/session/${SESSION_ID}/permission-mode`,
-        body: JSON.stringify({ permissionMode: "plan" }),
+        body: JSON.stringify({ permissionMode: "plan", source: "manual" }),
       },
     ])
     const frame = setup.captureCharFrame()

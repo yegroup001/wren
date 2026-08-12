@@ -688,7 +688,7 @@ export function Prompt(props: {
         createWrenRequest(`/session/${props.sessionId}/permission-mode`, {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ permissionMode: next }),
+          body: JSON.stringify({ permissionMode: next, source: "manual" }),
         }),
       )
       toast.show({

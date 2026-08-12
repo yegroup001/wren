@@ -1,13 +1,16 @@
-import { basename, dirname, isAbsolute, join, sep } from 'path'
-import type { ToolPermissionContext } from '../Tool.js'
-import { isEnvTruthy } from './envUtils.js'
+import { basename, dirname, isAbsolute, join, sep } from "path"
+import type { ToolPermissionContext } from "../Tool.js"
+import { isEnvTruthy } from "./envUtils.js"
 import {
   getFileReadIgnorePatterns,
+  isSensitivePlanReadPath,
+  isSensitivePlanSearchGlob,
   normalizePatternsToPath,
-} from './permissions/filesystem.js'
-import { getPlatform } from './platform.js'
-import { getGlobExclusionsForPluginCache } from './plugins/orphanedPluginFilter.js'
-import { ripGrep } from './ripgrep.js'
+  PLAN_SENSITIVE_SEARCH_EXCLUSIONS,
+} from "./permissions/filesystem.js"
+import { getPlatform } from "./platform.js"
+import { getGlobExclusionsForPluginCache } from "./plugins/orphanedPluginFilter.js"
+import { ripGrep } from "./ripgrep.js"
 
 /**
  * Extracts the static base directory from a glob pattern.
@@ -34,14 +37,11 @@ export function extractGlobBaseDirectory(pattern: string): {
   const staticPrefix = pattern.slice(0, match.index)
 
   // Find the last path separator in the static prefix
-  const lastSepIndex = Math.max(
-    staticPrefix.lastIndexOf('/'),
-    staticPrefix.lastIndexOf(sep),
-  )
+  const lastSepIndex = Math.max(staticPrefix.lastIndexOf("/"), staticPrefix.lastIndexOf(sep))
 
   if (lastSepIndex === -1) {
     // No path separator before the glob - pattern is relative to cwd
-    return { baseDir: '', relativePattern: pattern }
+    return { baseDir: "", relativePattern: pattern }
   }
 
   let baseDir = staticPrefix.slice(0, lastSepIndex)
@@ -49,14 +49,14 @@ export function extractGlobBaseDirectory(pattern: string): {
 
   // Handle root directory patterns (e.g., /*.txt on Unix or C:/*.txt on Windows)
   // When lastSepIndex is 0, baseDir is empty but we need to use '/' as the root
-  if (baseDir === '' && lastSepIndex === 0) {
-    baseDir = '/'
+  if (baseDir === "" && lastSepIndex === 0) {
+    baseDir = "/"
   }
 
   // Handle Windows drive root paths (e.g., C:/*.txt)
   // 'C:' means "current directory on drive C" (relative), not root
   // We need 'C:/' or 'C:\' for the actual drive root
-  if (getPlatform() === 'windows' && /^[A-Za-z]:$/.test(baseDir)) {
+  if (getPlatform() === "windows" && /^[A-Za-z]:$/.test(baseDir)) {
     baseDir = baseDir + sep
   }
 
@@ -84,7 +84,7 @@ export async function glob(
   }
 
   const ignorePatterns = normalizePatternsToPath(
-    getFileReadIgnorePatterns(toolPermissionContext),
+    getFileReadIgnorePatterns(toolPermissionContext, toolPermissionContext.mode === "plan"),
     searchDir,
   )
 
@@ -95,33 +95,41 @@ export async function glob(
   // --no-ignore: don't respect .gitignore (default true, set WREN_GLOB_NO_IGNORE=false to respect .gitignore)
   // --hidden: include hidden files (default true, set WREN_GLOB_HIDDEN=false to exclude)
   // Note: use || instead of ?? to treat empty string as unset (defaulting to true)
-  const noIgnore = isEnvTruthy(process.env.WREN_GLOB_NO_IGNORE || 'true')
-  const hidden = isEnvTruthy(process.env.WREN_GLOB_HIDDEN || 'true')
+  const noIgnore = isEnvTruthy(process.env.WREN_GLOB_NO_IGNORE || "true")
+  const hidden = isEnvTruthy(process.env.WREN_GLOB_HIDDEN || "true")
   const args = [
-    '--files',
-    '--glob',
+    "--files",
+    "--glob",
     searchPattern,
-    '--sort=modified',
-    ...(noIgnore ? ['--no-ignore'] : []),
-    ...(hidden ? ['--hidden'] : []),
+    "--sort=modified",
+    ...(noIgnore ? ["--no-ignore"] : []),
+    ...(hidden ? ["--hidden"] : []),
   ]
+
+  if (
+    toolPermissionContext.mode === "plan" &&
+    !isSensitivePlanReadPath(searchDir) &&
+    !isSensitivePlanSearchGlob(filePattern)
+  ) {
+    for (const exclusion of PLAN_SENSITIVE_SEARCH_EXCLUSIONS) {
+      args.push("--iglob", exclusion)
+    }
+  }
 
   // Add ignore patterns
   for (const pattern of ignorePatterns) {
-    args.push('--glob', `!${pattern}`)
+    args.push("--glob", `!${pattern}`)
   }
 
   // Exclude orphaned plugin version directories
   for (const exclusion of await getGlobExclusionsForPluginCache(searchDir)) {
-    args.push('--glob', exclusion)
+    args.push("--glob", exclusion)
   }
 
-  const allPaths = await ripGrep(args, searchDir, abortSignal)
+  const allPaths = await ripGrep(args, searchDir, abortSignal, searchDir)
 
   // ripgrep returns relative paths, convert to absolute
-  const absolutePaths = allPaths.map(p =>
-    isAbsolute(p) ? p : join(searchDir, p),
-  )
+  const absolutePaths = allPaths.map((p) => (isAbsolute(p) ? p : join(searchDir, p)))
 
   const truncated = absolutePaths.length > offset + limit
   const files = absolutePaths.slice(offset, offset + limit)
