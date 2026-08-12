@@ -51,18 +51,19 @@ export function SubagentRoute(props: {
   const [error, setError] = createSignal<string | undefined>()
 
   const tokenTotal = createMemo((): number => {
-    let sum = 0
+    let latest: UsageBlock | undefined
     for (const raw of messages()) {
       const msg = raw as SubagentMessage | undefined
       const usage = msg?.message?.usage
-      if (usage === undefined) continue
-      sum +=
-        (usage.input_tokens ?? 0) +
-        (usage.output_tokens ?? 0) +
-        (usage.cache_creation_input_tokens ?? 0) +
-        (usage.cache_read_input_tokens ?? 0)
+      if (usage !== undefined) latest = usage
     }
-    return sum
+    if (latest === undefined) return 0
+    return (
+      (latest.input_tokens ?? 0) +
+      (latest.output_tokens ?? 0) +
+      (latest.cache_creation_input_tokens ?? 0) +
+      (latest.cache_read_input_tokens ?? 0)
+    )
   })
 
   const tokenText = createMemo((): string => formatTokens(tokenTotal()))
