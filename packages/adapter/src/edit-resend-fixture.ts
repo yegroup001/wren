@@ -11,6 +11,7 @@ const INTERNAL_ORIGIN = "http://wren.internal"
 type EngineMessage = {
   readonly role: "user" | "assistant"
   readonly content: unknown
+  readonly uuid?: string
 }
 
 class ResendFailure extends Error {
@@ -32,9 +33,12 @@ export class TransactionalFakeEngine implements WrenEngine {
     this.replacementStarted = this.replacementStartedController.promise
   }
 
-  async *submitMessage(prompt: string): AsyncGenerator<SDKMessage, void, unknown> {
+  async *submitMessage(
+    prompt: string,
+    runOptions?: { uuid?: string },
+  ): AsyncGenerator<SDKMessage, void, unknown> {
     this.submitMessageCalls.push(prompt)
-    this.messages.push({ role: "user", content: prompt })
+    this.messages.push({ role: "user", content: prompt, uuid: runOptions?.uuid })
     this.turn += 1
     yield systemInit(this.model)
 
@@ -44,10 +48,18 @@ export class TransactionalFakeEngine implements WrenEngine {
       prompt === "replacement result error"
     ) {
       const assistant = assistantWithProjection(this.turn, "replacement", "/replacement.ts")
-      this.messages.push({ role: "assistant", content: assistant.message.content })
+      this.messages.push({
+        role: "assistant",
+        content: assistant.message.content,
+        uuid: assistant.uuid,
+      })
       yield assistant
       const toolResult = userToolResult(this.turn, "replacement")
-      this.messages.push({ role: "user", content: toolResult.message.content })
+      this.messages.push({
+        role: "user",
+        content: toolResult.message.content,
+        uuid: toolResult.uuid,
+      })
       yield toolResult
       if (prompt === "replacement fails") throw new ResendFailure("resend failed")
       if (prompt === "replacement result error") {
@@ -62,14 +74,26 @@ export class TransactionalFakeEngine implements WrenEngine {
 
     if (prompt === "original first") {
       const assistant = assistantWithProjection(this.turn, "original", "/original.ts")
-      this.messages.push({ role: "assistant", content: assistant.message.content })
+      this.messages.push({
+        role: "assistant",
+        content: assistant.message.content,
+        uuid: assistant.uuid,
+      })
       yield assistant
       const toolResult = userToolResult(this.turn, "original")
-      this.messages.push({ role: "user", content: toolResult.message.content })
+      this.messages.push({
+        role: "user",
+        content: toolResult.message.content,
+        uuid: toolResult.uuid,
+      })
       yield toolResult
     } else {
       const assistant = assistantWithText(this.turn, `answer to ${prompt}`)
-      this.messages.push({ role: "assistant", content: assistant.message.content })
+      this.messages.push({
+        role: "assistant",
+        content: assistant.message.content,
+        uuid: assistant.uuid,
+      })
       yield assistant
     }
     yield resultSuccess()

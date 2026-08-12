@@ -2292,22 +2292,20 @@ export function createWrenAdapter(engine: WrenEngine, options?: WrenAdapterOptio
     tuiMessages: readonly Message[],
     engineMessages: readonly unknown[],
   ): void {
-    const tuiUserIds = tuiMessages
-      .filter((m) => m.role === "user")
-      .filter((m) => m.parts.some((p) => p.type === "text"))
-      .map((m) => m.id)
-
-    let userIdx = 0
-    for (let i = 0; i < engineMessages.length && userIdx < tuiUserIds.length; i++) {
-      const record = engineMessageRecord(engineMessages[i])
-      if (record === null) continue
-      if (record.role !== "user") continue
-      if (isCcbToolResultContent(record.content)) continue
-      const tuiId = tuiUserIds[userIdx]
-      if (tuiId !== undefined) {
-        userMessageEngineCounts.set(tuiId, i)
+    const engineUuidToIndex = new Map<string, number>()
+    for (let i = 0; i < engineMessages.length; i++) {
+      const uuid = (engineMessages[i] as { uuid?: unknown })?.uuid
+      if (typeof uuid === "string") {
+        engineUuidToIndex.set(uuid, i)
       }
-      userIdx++
+    }
+
+    for (const m of tuiMessages) {
+      if (m.role !== "user") continue
+      if (!m.parts.some((p) => p.type === "text")) continue
+      const engineCount = engineUuidToIndex.get(m.id)
+      if (engineCount === undefined) continue
+      userMessageEngineCounts.set(m.id, engineCount)
     }
   }
 
