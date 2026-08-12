@@ -89,7 +89,7 @@ export function DialogHelp(props: { visible: () => boolean; onClose: () => void 
     return groups
   })
 
-  const dialogWidth = createMemo(() => Math.min(64, dims().width - 4))
+  const dialogWidth = createMemo(() => Math.min(72, dims().width - 4))
 
   return (
     <Show when={props.visible()}>

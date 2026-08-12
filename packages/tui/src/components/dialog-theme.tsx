@@ -41,7 +41,7 @@ export function DialogTheme(props: { visible: () => boolean; onClose: () => void
     },
   })
 
-  const dialogWidth = createMemo(() => Math.min(40, dims().width - 4))
+  const dialogWidth = createMemo(() => Math.min(48, dims().width - 4))
 
   return (
     <Show when={props.visible()}>
@@ -96,7 +96,7 @@ export function DialogTheme(props: { visible: () => boolean; onClose: () => void
             </For>
           </box>
           <box paddingLeft={2} marginTop={1}>
-            <text fg={theme().textMuted} wrapMode="none">{"enter to apply \u00b7 esc to cancel"}</text>
+            <text fg={theme().textMuted} wrapMode="none">{"enter apply · esc"}</text>
           </box>
         </box>
       </box>

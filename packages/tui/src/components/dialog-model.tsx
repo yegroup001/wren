@@ -199,7 +199,7 @@ export function DialogModel(props: {
     },
   })
 
-  const dialogWidth = createMemo(() => Math.min(60, dims().width - 4))
+  const dialogWidth = createMemo(() => Math.min(72, dims().width - 4))
 
   async function chooseModel(opt: DisplayEntry): Promise<void> {
     setErrorMessage(undefined)
@@ -373,7 +373,7 @@ export function DialogModel(props: {
           <box paddingLeft={2} marginTop={1}>
             <text fg={theme().textMuted} wrapMode="none">
               {
-                "enter select \u00b7 type to filter or set custom \u00b7 \u2190/\u2192 scope \u00b7 esc cancel"
+                "enter select · type filter/custom · ←/→ scope · esc"
               }
             </text>
           </box>

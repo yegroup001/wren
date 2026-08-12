@@ -82,7 +82,7 @@ export function CommandPalette(props: CommandPaletteProps): JSX.Element {
     },
   })
 
-  const dialogWidth = createMemo(() => Math.min(64, dims().width - 4))
+  const dialogWidth = createMemo(() => Math.min(72, dims().width - 4))
 
   return (
     <Show when={props.visible()}>
@@ -162,7 +162,7 @@ export function CommandPalette(props: CommandPaletteProps): JSX.Element {
             </scrollbox>
           </Show>
           <box paddingLeft={2} marginTop={1}>
-            <text fg={theme().textMuted} wrapMode="none">enter run · esc to cancel</text>
+            <text fg={theme().textMuted} wrapMode="none">enter run · esc</text>
           </box>
         </box>
       </box>

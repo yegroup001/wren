@@ -81,7 +81,7 @@ export function DialogStatus(props: {
     return null
   })
 
-  const dialogWidth = createMemo(() => Math.min(50, dims().width - 4))
+  const dialogWidth = createMemo(() => Math.min(56, dims().width - 4))
 
   function row(label: string, value: string): JSX.Element {
     return (

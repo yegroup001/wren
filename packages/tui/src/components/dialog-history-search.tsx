@@ -83,7 +83,7 @@ export function DialogHistorySearch(props: {
     },
   })
 
-  const dialogWidth = createMemo(() => Math.min(70, dims().width - 4))
+  const dialogWidth = createMemo(() => Math.min(72, dims().width - 4))
 
   return (
     <Show when={props.visible()}>
@@ -163,7 +163,7 @@ export function DialogHistorySearch(props: {
           </Show>
           <box paddingLeft={2} marginTop={1}>
             <text fg={theme().textMuted} wrapMode="none">
-              {"type to search \u00b7 \u2191\u2193 navigate \u00b7 enter select \u00b7 esc cancel"}
+              {"type search · ↑/↓ navigate · enter select · esc"}
             </text>
           </box>
         </box>

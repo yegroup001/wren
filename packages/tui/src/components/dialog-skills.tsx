@@ -126,7 +126,7 @@ export function DialogSkills(props: { visible: () => boolean; onClose: () => voi
     return groups
   })
 
-  const dialogWidth = createMemo(() => Math.min(64, dims().width - 4))
+  const dialogWidth = createMemo(() => Math.min(72, dims().width - 4))
 
   return (
     <Show when={props.visible()}>
@@ -205,7 +205,7 @@ export function DialogSkills(props: { visible: () => boolean; onClose: () => voi
           <box paddingLeft={2} marginTop={1}>
             <text fg={theme().textMuted} wrapMode="none">
               {
-                "type to filter \u00b7 \u2191\u2193 navigate \u00b7 enter to close \u00b7 esc to cancel"
+                "type filter · ↑/↓ navigate · enter close · esc"
               }
             </text>
           </box>

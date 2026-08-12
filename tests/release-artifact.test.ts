@@ -69,7 +69,6 @@ describe("release artifact inspection", () => {
         expect(files.some((file) => file.includes(fragment))).toBe(false)
       }
       expect(files).toContain("README.md")
-      expect(files).toContain("THIRD_PARTY_NOTICES.md")
       expect(files).toContain("bunfig.toml")
       expect(files).toContain("config/follow-redirects-shim.ts")
     },

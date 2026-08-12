@@ -95,7 +95,7 @@ export function DialogAgent(props: { visible: () => boolean; onClose: () => void
     })()
   })
 
-  const dialogWidth = createMemo(() => Math.min(50, dims().width - 4))
+  const dialogWidth = createMemo(() => Math.min(56, dims().width - 4))
 
   return (
     <Show when={props.visible()}>
@@ -172,7 +172,7 @@ export function DialogAgent(props: { visible: () => boolean; onClose: () => void
           </Show>
           <box paddingLeft={2} marginTop={1}>
             <text fg={theme().textMuted} wrapMode="none">
-              {"type to filter \u00b7 enter to select \u00b7 esc to cancel"}
+              {"type filter · enter select · esc"}
             </text>
           </box>
         </box>

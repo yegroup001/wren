@@ -208,7 +208,7 @@ export function DialogSessionList(props: {
     },
   })
 
-  const dialogWidth = createMemo(() => Math.min(70, dims().width - 4))
+  const dialogWidth = createMemo(() => Math.min(72, dims().width - 4))
 
   return (
     <Show when={props.visible()}>
@@ -308,7 +308,7 @@ export function DialogSessionList(props: {
             <text
               fg={theme().textMuted}
               wrapMode="none"
-              children={"enter resume \u00b7 r rename \u00b7 d delete \u00b7 esc cancel"}
+              children={"enter resume · r rename · d delete · esc"}
             />
           </box>
         </box>

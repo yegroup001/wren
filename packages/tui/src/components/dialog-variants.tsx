@@ -26,7 +26,7 @@ export function DialogVariants(props: {
   const local = useLocal()
   const dims = useTerminalDimensions()
   const [selected, setSelected] = createSignal(0)
-  const dialogWidth = createMemo(() => Math.min(40, dims().width - 4))
+  const dialogWidth = createMemo(() => Math.min(48, dims().width - 4))
   let justOpened = false
 
   const efforts = createMemo<readonly EffortLevel[]>(() => {
@@ -167,7 +167,7 @@ export function DialogVariants(props: {
                 <text fg={theme().textMuted}>
                   Thinking is controlled by the provider configuration.
                 </text>
-                <text fg={theme().textMuted} wrapMode="none">{"press enter or esc to close"}</text>
+                <text fg={theme().textMuted} wrapMode="none">{"press enter or esc"}</text>
               </box>
             }
           >
@@ -205,7 +205,7 @@ export function DialogVariants(props: {
               </For>
             </box>
             <box paddingLeft={2} marginTop={1}>
-              <text fg={theme().textMuted} wrapMode="none">{"enter select · ↑/↓ navigate · esc cancel"}</text>
+              <text fg={theme().textMuted} wrapMode="none">{"enter select · ↑/↓ navigate · esc"}</text>
             </box>
           </Show>
         </box>

@@ -40,7 +40,7 @@ export function DialogDoctor(props: { visible: () => boolean; onClose: () => voi
     })()
   })
 
-  const dialogWidth = createMemo(() => Math.min(60, dims().width - 4))
+  const dialogWidth = createMemo(() => Math.min(64, dims().width - 4))
 
   function levelColor(level: string): string {
     if (level === "error") return theme().error
