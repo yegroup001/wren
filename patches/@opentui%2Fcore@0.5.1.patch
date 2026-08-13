@@ -1,0 +1,30 @@
+diff --git a/chunk-bun-8fkgaxc6.js b/chunk-bun-8fkgaxc6.js
+index 3977ea9f1a24cf7e00cadc7c6b0f419c3405c37e..5eeaf6bcd672290a15139947e0384b75a5f63245 100644
+--- a/chunk-bun-8fkgaxc6.js
++++ b/chunk-bun-8fkgaxc6.js
+@@ -1150,8 +1150,8 @@ class Renderable extends BaseRenderable {
+         y: scissorRect.y,
+         width: scissorRect.width,
+         height: scissorRect.height,
+-        screenX: this._screenX,
+-        screenY: this._screenY
++        screenX: scissorRect.x + (this.buffered ? this._screenX : 0),
++        screenY: scissorRect.y + (this.buffered ? this._screenY : 0)
+       });
+     }
+     if (!this._hasVisibleChildFilter()) {
+diff --git a/chunk-node-0yw3x5m7.js b/chunk-node-0yw3x5m7.js
+index 84a2d22b6e36c1dab68641684f66b048069634ee..7156f9ce48d9a7cd78d2772bf936930ed46f87b5 100644
+--- a/chunk-node-0yw3x5m7.js
++++ b/chunk-node-0yw3x5m7.js
+@@ -1149,8 +1149,8 @@ class Renderable extends BaseRenderable {
+         y: scissorRect.y,
+         width: scissorRect.width,
+         height: scissorRect.height,
+-        screenX: this._screenX,
+-        screenY: this._screenY
++        screenX: scissorRect.x + (this.buffered ? this._screenX : 0),
++        screenY: scissorRect.y + (this.buffered ? this._screenY : 0)
+       });
+     }
+     if (!this._hasVisibleChildFilter()) {
