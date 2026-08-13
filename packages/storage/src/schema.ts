@@ -22,13 +22,14 @@ export const SCHEMA_DDL = [
     time_updated     TEXT NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS message (
-    id           TEXT PRIMARY KEY,
-    session_id   TEXT NOT NULL REFERENCES session(id) ON DELETE CASCADE,
-    role         TEXT NOT NULL,
-    created_at   TEXT NOT NULL,
-    error        TEXT,
-    time_created TEXT NOT NULL,
-    time_updated TEXT NOT NULL
+    id             TEXT PRIMARY KEY,
+    session_id     TEXT NOT NULL REFERENCES session(id) ON DELETE CASCADE,
+    role           TEXT NOT NULL,
+    created_at     TEXT NOT NULL,
+    error          TEXT,
+    compact_summary TEXT,
+    time_created   TEXT NOT NULL,
+    time_updated   TEXT NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS part (
     id           TEXT PRIMARY KEY,

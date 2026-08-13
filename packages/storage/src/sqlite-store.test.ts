@@ -49,6 +49,31 @@ describe("sqlite session store", () => {
     }
   })
 
+  test("round-trips the compact summary so the fold survives resume", async () => {
+    const store = createSqliteSessionStore(await tempDbPath())
+    const bundle = fullBundle("ses_sql_compact_summary", [
+      {
+        id: parseMessageId("msg_compact_summary"),
+        sessionId: parseSessionId("ses_sql_compact_summary"),
+        role: "assistant" as const,
+        parts: [{ type: "text" as const, id: parsePartId("part_text_1"), text: "Compacted" }],
+        createdAt: "2026-07-08T00:00:00.000Z",
+        compactSummary: { notification: "Compacted", summary: "## The summary" },
+      },
+    ])
+
+    await store.save(bundle)
+    const result = await store.load(bundle.session.id)
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.value.messages[0]?.compactSummary).toEqual({
+        notification: "Compacted",
+        summary: "## The summary",
+      })
+    }
+  })
+
   test("preserves Agent identity for persisted subagent navigation", async () => {
     const sessionId = parseSessionId("ses_sql_agent_identity")
     const store = createSqliteSessionStore(await tempDbPath())
@@ -65,7 +90,8 @@ describe("sqlite session store", () => {
             input: { description: "Inspect storage", subagent_type: "Explore" },
             status: "completed" as const,
             agentId: "a0123456789abcdef",
-            output: "<persisted-output>\nPreview (first 2.0 KB):\nlarge output\n</persisted-output>",
+            output:
+              "<persisted-output>\nPreview (first 2.0 KB):\nlarge output\n</persisted-output>",
           },
         ],
         createdAt: "2026-07-08T00:00:00.000Z",
@@ -468,9 +494,12 @@ describe("sqlite session store", () => {
     // Append engine data for the same session using a separate engine store
     const { createEngineTranscriptStore } = await import("./engine-transcript-store")
     const engineStore = createEngineTranscriptStore(dbPath)
-    await engineStore.append("ses_sql_delete_engine", "/workspace", { sessionId: "ses_sql_delete_engine" }, [
-      { type: "user", messageUuid: "msg-engine-1", payload: { type: "user" } },
-    ])
+    await engineStore.append(
+      "ses_sql_delete_engine",
+      "/workspace",
+      { sessionId: "ses_sql_delete_engine" },
+      [{ type: "user", messageUuid: "msg-engine-1", payload: { type: "user" } }],
+    )
     await engineStore.saveAgentMeta("ses_sql_delete_engine", {
       agentId: "agent-delete-1",
       sessionId: "ses_sql_delete_engine",
@@ -499,7 +528,6 @@ describe("sqlite session store", () => {
 
     store.close()
   })
-
 })
 
 async function tempDbPath(): Promise<string> {

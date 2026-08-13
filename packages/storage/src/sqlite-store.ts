@@ -49,6 +49,7 @@ type MessageRow = {
   role: string
   created_at: string
   error: string | null
+  compact_summary: string | null
 }
 
 type PartRow = {
@@ -119,9 +120,18 @@ class SqliteSessionStore implements SessionStore {
 
       for (const msg of bundle.messages) {
         this.db.run(
-          `INSERT OR REPLACE INTO message (id, session_id, role, created_at, error, time_created, time_updated)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [msg.id, msg.sessionId, msg.role, msg.createdAt, msg.error ?? null, msg.createdAt, now],
+          `INSERT OR REPLACE INTO message (id, session_id, role, created_at, error, compact_summary, time_created, time_updated)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            msg.id,
+            msg.sessionId,
+            msg.role,
+            msg.createdAt,
+            msg.error ?? null,
+            msg.compactSummary !== undefined ? JSON.stringify(msg.compactSummary) : null,
+            msg.createdAt,
+            now,
+          ],
         )
         for (const part of msg.parts) {
           this.db.run(
@@ -481,6 +491,10 @@ class SqliteSessionStore implements SessionStore {
         parts,
         createdAt: mr.created_at,
         ...(mr.error !== null && { error: mr.error }),
+        ...(mr.compact_summary !== null &&
+          mr.compact_summary !== undefined && {
+            compactSummary: JSON.parse(mr.compact_summary) as Message["compactSummary"],
+          }),
       }
       return msg
     })
