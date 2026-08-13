@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import {
   formatTimestamp,
   hasMarkdownSyntax,
+  isCompactionSummaryText,
   parseCompactSummaryText,
   thinkingSummary,
   transcriptMessageIds,
@@ -117,5 +118,19 @@ describe("parseCompactSummaryText", () => {
   test("rejects incomplete or ordinary text", () => {
     expect(parseCompactSummaryText("Compacted\n<compact-summary>incomplete")).toBeNull()
     expect(parseCompactSummaryText("ordinary assistant text")).toBeNull()
+  })
+
+  test("detects marker-less compaction summaries by their standard header", () => {
+    const text =
+      "This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.\n\nSummary:\n1. Primary Request"
+    expect(isCompactionSummaryText(text)).toBe(true)
+    expect(parseCompactSummaryText(text)).toEqual({
+      notification: "",
+      summary: text.trim(),
+    })
+  })
+
+  test("does not treat ordinary user messages as compaction summaries", () => {
+    expect(isCompactionSummaryText("This session is being continued with a new task.")).toBe(false)
   })
 })

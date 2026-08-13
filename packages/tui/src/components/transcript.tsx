@@ -191,9 +191,7 @@ export function Transcript(props: {
             <TranscriptMessageRow
               messageId={messageId}
               message={() => messages()[index()]}
-              previousMessage={() =>
-                index() > 0 ? messages()[index() - 1] : undefined
-              }
+              previousMessage={() => (index() > 0 ? messages()[index() - 1] : undefined)}
               sessionId={props.sessionId}
               isStreaming={() => messageId === activeAssistantId()}
               modalActive={props.modalActive}
@@ -435,7 +433,10 @@ function UserMessageView(props: {
           }
         >
           {(parsed) => (
-            <CompactSummaryContent notification={parsed().notification} summary={parsed().summary} />
+            <CompactSummaryContent
+              notification={parsed().notification}
+              summary={parsed().summary}
+            />
           )}
         </Show>
         <Show when={menuOpen()}>
@@ -595,11 +596,26 @@ function SystemMessageView(props: { message: Message }): JSX.Element {
   )
 }
 
+/**
+ * Standard header the compaction summary message starts with. App-level
+ * compactions inject the summary as a plain user message without the
+ * <compact-summary> marker; detect it so those render as a collapsible fold
+ * too (both live and after resume, where the marker-less text is persisted).
+ */
+const COMPACTION_SUMMARY_HEADER =
+  "This session is being continued from a previous conversation that ran out of context."
+
+export function isCompactionSummaryText(text: string): boolean {
+  return text.startsWith(COMPACTION_SUMMARY_HEADER)
+}
+
 export function parseCompactSummaryText(
   text: string,
 ): { notification: string; summary: string } | null {
   const m = text.match(/^([\s\S]*?)<compact-summary>([\s\S]*?)<\/compact-summary>/)
-  return m ? { notification: (m[1] ?? "").trim(), summary: (m[2] ?? "").trim() } : null
+  if (m) return { notification: (m[1] ?? "").trim(), summary: (m[2] ?? "").trim() }
+  if (isCompactionSummaryText(text)) return { notification: "", summary: text.trim() }
+  return null
 }
 
 function CompactSummaryView(props: { part: TextPart }): JSX.Element {
@@ -675,7 +691,10 @@ function PartView(props: {
   const { theme } = useTheme()
   switch (props.part.type) {
     case "text":
-      if (props.part.text.includes("<compact-summary>")) {
+      if (
+        props.part.text.includes("<compact-summary>") ||
+        isCompactionSummaryText(props.part.text)
+      ) {
         return <CompactSummaryView part={props.part} />
       }
       return <TextPartView part={props.part} streaming={props.streaming} />
