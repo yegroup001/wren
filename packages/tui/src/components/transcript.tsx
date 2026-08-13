@@ -661,7 +661,11 @@ function CompactSummaryContent(props: {
         />
       </Show>
       <box paddingLeft={3} marginTop={1} flexDirection="column">
-        <box onMouseUp={toggle}>
+        {/* Toggle on mouse-down: clicking a fold's text starts a text
+            selection, whose re-render can overwrite the hit grid so the
+            release event lands on a shallow ancestor instead of this row.
+            Pressing works because it hits before selection starts. */}
+        <box onMouseDown={toggle}>
           <text fg={theme().thinking} wrapMode="none">
             {`${expanded() ? "\u25be" : "\u25b8"} Compaction Summary`}
           </text>
@@ -811,7 +815,10 @@ export function ThinkingPartView(props: { part: ThinkingPart; streaming: boolean
   return (
     <Show when={content().length > 0}>
       <box paddingLeft={3} marginTop={1} flexDirection="column">
-        <box onMouseUp={toggle}>
+        {/* Toggle on mouse-down: while a thought streams, renders land
+            between press and release and move the row, so the release
+            hit-test misses. Toggle on press instead. */}
+        <box onMouseDown={toggle}>
           <text fg={theme().thinking} wrapMode="none">
             {`${expanded() ? "\u25be " : "\u25b8 "}${title()}${summary() ? `: ${summary()}` : ""}${durationLabel() ? ` (${durationLabel()})` : ""}`}
           </text>
