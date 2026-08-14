@@ -77,7 +77,7 @@
     },
     "apps/cli": {
       "name": "@wren/cli",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "bin": {
         "wren": "src/main.ts",
       },
@@ -96,7 +96,7 @@
     },
     "packages/adapter": {
       "name": "@wren/adapter",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@wren/application": "workspace:*",
         "@wren/config-node": "workspace:*",
@@ -110,7 +110,7 @@
     },
     "packages/application": {
       "name": "@wren/application",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@wren/engine": "workspace:*",
         "@wren/protocol": "workspace:*",
@@ -120,7 +120,7 @@
     },
     "packages/client": {
       "name": "@wren/client",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@wren/application": "workspace:*",
         "@wren/protocol": "workspace:*",
@@ -128,7 +128,7 @@
     },
     "packages/config-node": {
       "name": "@wren/config-node",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@wren/protocol": "workspace:*",
         "zod": "4.4.3",
@@ -136,7 +136,7 @@
     },
     "packages/engine": {
       "name": "@wren/engine",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@agentclientprotocol/sdk": "^0.19.0",
         "@anthropic-ai/sdk": "^0.81.0",
@@ -166,14 +166,14 @@
     },
     "packages/image-processor-napi": {
       "name": "image-processor-napi",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "sharp": "*",
       },
     },
     "packages/model-provider": {
       "name": "@wren/model-provider",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.81.0",
         "openai": "^6.33.0",
@@ -181,21 +181,21 @@
     },
     "packages/protocol": {
       "name": "@wren/protocol",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "zod": "4.4.3",
       },
     },
     "packages/storage": {
       "name": "@wren/storage",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@wren/protocol": "workspace:*",
       },
     },
     "packages/tui": {
       "name": "@wren/tui",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@opentui/core": "0.5.1",
         "@opentui/solid": "0.5.1",

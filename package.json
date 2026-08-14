@@ -1,6 +1,6 @@
 {
   "name": "wren",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "AGPL-3.0-or-later",
   "private": true,
   "type": "module",
@@ -51,6 +51,7 @@
     "packages/*"
   ],
   "scripts": {
+    "version:sync": "bun run scripts/sync-version.ts",
     "build": "bun run --filter '*' build",
     "build:binary": "bun run apps/cli/compile.ts",
     "build:release": "bun run scripts/build-release.ts",
