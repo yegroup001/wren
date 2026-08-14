@@ -77,7 +77,7 @@
     },
     "apps/cli": {
       "name": "@wren/cli",
-      "version": "0.1.1",
+      "version": "0.1.0",
       "bin": {
         "wren": "src/main.ts",
       },
@@ -94,20 +94,9 @@
         "commander": "^14.0.0",
       },
     },
-    "apps/web": {
-      "name": "@wren/web",
-      "version": "0.1.1",
-      "dependencies": {
-        "@wren/protocol": "workspace:*",
-        "highlight.js": "^11.11.1",
-        "marked": "^17.0.6",
-        "solid-js": "1.9.14",
-        "xss": "^1.0.15",
-      },
-    },
     "packages/adapter": {
       "name": "@wren/adapter",
-      "version": "0.1.1",
+      "version": "0.1.0",
       "dependencies": {
         "@wren/application": "workspace:*",
         "@wren/config-node": "workspace:*",
@@ -121,7 +110,7 @@
     },
     "packages/application": {
       "name": "@wren/application",
-      "version": "0.1.1",
+      "version": "0.1.0",
       "dependencies": {
         "@wren/engine": "workspace:*",
         "@wren/protocol": "workspace:*",
@@ -131,7 +120,7 @@
     },
     "packages/client": {
       "name": "@wren/client",
-      "version": "0.1.1",
+      "version": "0.1.0",
       "dependencies": {
         "@wren/application": "workspace:*",
         "@wren/protocol": "workspace:*",
@@ -139,7 +128,7 @@
     },
     "packages/config-node": {
       "name": "@wren/config-node",
-      "version": "0.1.1",
+      "version": "0.1.0",
       "dependencies": {
         "@wren/protocol": "workspace:*",
         "zod": "4.4.3",
@@ -147,7 +136,7 @@
     },
     "packages/engine": {
       "name": "@wren/engine",
-      "version": "0.1.1",
+      "version": "0.1.0",
       "dependencies": {
         "@agentclientprotocol/sdk": "^0.19.0",
         "@anthropic-ai/sdk": "^0.81.0",
@@ -177,14 +166,14 @@
     },
     "packages/image-processor-napi": {
       "name": "image-processor-napi",
-      "version": "0.1.1",
+      "version": "0.1.0",
       "dependencies": {
         "sharp": "*",
       },
     },
     "packages/model-provider": {
       "name": "@wren/model-provider",
-      "version": "0.1.1",
+      "version": "0.1.0",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.81.0",
         "openai": "^6.33.0",
@@ -192,21 +181,21 @@
     },
     "packages/protocol": {
       "name": "@wren/protocol",
-      "version": "0.1.1",
+      "version": "0.1.0",
       "dependencies": {
         "zod": "4.4.3",
       },
     },
     "packages/storage": {
       "name": "@wren/storage",
-      "version": "0.1.1",
+      "version": "0.1.0",
       "dependencies": {
         "@wren/protocol": "workspace:*",
       },
     },
     "packages/tui": {
       "name": "@wren/tui",
-      "version": "0.1.1",
+      "version": "0.1.0",
       "dependencies": {
         "@opentui/core": "0.5.1",
         "@opentui/solid": "0.5.1",
@@ -499,8 +488,6 @@
     "@wren/storage": ["@wren/storage@workspace:packages/storage"],
 
     "@wren/tui": ["@wren/tui@workspace:packages/tui"],
-
-    "@wren/web": ["@wren/web@workspace:apps/web"],
 
     "accepts": ["accepts@2.0.0", "", { "dependencies": { "mime-types": "^3.0.0", "negotiator": "^1.0.0" } }, "sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng=="],
 

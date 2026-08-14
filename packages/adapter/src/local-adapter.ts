@@ -929,6 +929,9 @@ export function createWrenAdapter(engine: WrenEngine, options?: WrenAdapterOptio
     // fall back to saveSessionMeta (which skips messages) until /messages
     // is explicitly called.
     loadedMessageSessions.add(session.id)
+    // Persist immediately so a session created without any prompt (e.g. via
+    // the web GUI) survives a restart instead of being dropped.
+    void persistSession(session.id)
     return json(session, 201)
   }
 

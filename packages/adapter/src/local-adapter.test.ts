@@ -530,6 +530,26 @@ describe("local adapter — in-process fetch routes", () => {
     dispose()
   })
 
+  test("persists a newly created session immediately", async () => {
+    const sessionStore = createMemorySessionStore()
+    const { adapter, dispose } = createRoot((d) => ({
+      adapter: createWrenAdapter(new FakeWrenEngine({ kind: "text", text: "unused" }), {
+        clock: { now: () => FIXED_NOW },
+        sessionStore,
+      }),
+      dispose: d,
+    }))
+    const session = await createSession(adapter)
+
+    const saved = await sessionStore.load(parseSessionId(session.id))
+    expect(saved.ok).toBe(true)
+    if (saved.ok) {
+      expect(saved.value.session.id).toBe(session.id)
+      expect(saved.value.messages).toEqual([])
+    }
+    dispose()
+  })
+
   test("projects a durable system event for goal set without creating a user message", async () => {
     const sessionStore = createMemorySessionStore()
     const fakeEngine = new FakeWrenEngine({ kind: "text", text: "goal response" })
