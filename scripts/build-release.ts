@@ -209,22 +209,31 @@ async function upxCompress(binaryPath: string): Promise<void> {
   }
 }
 
+function nativePackagesFor(pkgName: string): string[] {
+  if (!pkgName.startsWith("@opentui/core-linux-")) return [pkgName]
+  const glibcPackage = pkgName.replace(/-musl$/, "")
+  return [glibcPackage, `${glibcPackage}-musl`]
+}
+
+function installedPackagePath(pkgName: string): string {
+  return join(REPO_ROOT, "node_modules", pkgName)
+}
+
 // --- Build loop ---
 const results: { target: string; path: string; size: string; compressed: boolean }[] = []
 
 for (const target of targets) {
   console.log(`\n=== Building ${target.name} ===`)
 
-  const isHostNative = target.nativePackage === "@opentui/core-linux-x64"
-  const hostNativeExists = existsSync(
-    join(REPO_ROOT, "node_modules", "@opentui", "core-linux-x64", "libopentui.so"),
-  )
-  let symlinkInfo: { linkPath: string; originalTarget: string | null } | null = null
+  const symlinkInfos: { pkgName: string; originalTarget: string | null }[] = []
 
-  // For non-host targets, download and symlink the native module
-  if (!(isHostNative && hostNativeExists)) {
-    const nativePath = await ensureNativePackage(target.nativePackage)
-    symlinkInfo = setupSymlink(target.nativePackage, nativePath)
+  // OpenTUI's Linux loader resolves both libc variants while bundling, even
+  // though the compiled target only embeds the selected runtime variant.
+  for (const pkgName of nativePackagesFor(target.nativePackage)) {
+    if (existsSync(join(installedPackagePath(pkgName), "package.json"))) continue
+    const nativePath = await ensureNativePackage(pkgName)
+    const { originalTarget } = setupSymlink(pkgName, nativePath)
+    symlinkInfos.push({ pkgName, originalTarget })
   }
 
   try {
@@ -235,7 +244,6 @@ for (const target of targets) {
         "run",
         join(REPO_ROOT, "apps/cli/compile.ts"),
         `--target=${target.bunTarget}`,
-        `--native=${target.nativePackage}`,
         `--outfile=${outfile}`,
       ],
       stdout: "inherit",
@@ -262,8 +270,8 @@ for (const target of targets) {
       compressed,
     })
   } finally {
-    if (symlinkInfo) {
-      cleanupSymlink(target.nativePackage, symlinkInfo.originalTarget)
+    for (const { pkgName, originalTarget } of symlinkInfos) {
+      cleanupSymlink(pkgName, originalTarget)
     }
   }
 }
