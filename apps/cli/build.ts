@@ -1,3 +1,18 @@
+import { existsSync } from "node:fs"
+import { join } from "node:path"
+
+// serve.ts embeds apps/web/dist via ?raw imports — ensure the assets exist
+// before bundling the CLI.
+const webDist = join(import.meta.dir, "..", "web", "dist")
+if (!existsSync(join(webDist, "index.html"))) {
+  const webBuild = Bun.spawnSync({
+    cmd: ["bun", "run", join(import.meta.dir, "..", "web", "build.ts")],
+    stdout: "inherit",
+    stderr: "inherit",
+  })
+  if (!webBuild.success) process.exit(1)
+}
+
 const WORKSPACE_EXTERNALS = [
   "@wren/engine",
   "@wren/adapter",

@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "paths": {
+      "@wren/protocol": ["../../packages/protocol/src/index.ts"],
+      "@wren/protocol/*": ["../../packages/protocol/src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "build.ts"],
+  "references": [{ "path": "../../packages/protocol" }]
+}

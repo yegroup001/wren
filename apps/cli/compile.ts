@@ -46,6 +46,24 @@ const finalOutfile = resolve(REPO_ROOT, requestedOutfile)
 
 mkdirSync(dirname(finalOutfile), { recursive: true })
 
+// --- Build web GUI assets ---
+// serve.ts embeds apps/web/dist via ?raw imports; standalone binaries cannot
+// read the filesystem, so the assets must exist before bundling.
+const webDistDir = join(REPO_ROOT, "apps", "web", "dist")
+if (!existsSync(join(webDistDir, "index.html"))) {
+  console.log("Building web assets...")
+  const webBuild = Bun.spawnSync({
+    cmd: ["bun", "run", join(REPO_ROOT, "apps", "web", "build.ts")],
+    cwd: REPO_ROOT,
+    stdout: "inherit",
+    stderr: "inherit",
+  })
+  if (!webBuild.success) {
+    console.error("web build failed")
+    process.exit(1)
+  }
+}
+
 const ENGINE_SRC = join(REPO_ROOT, "packages/engine/src")
 const MODEL_PROVIDER = join(REPO_ROOT, "packages/model-provider/src")
 const STUB_NAMESPACE = "wren-tsx-stub"
@@ -143,6 +161,28 @@ function findReal(dir: string, spec: string): string | null {
 const NONESSENTIAL_FILTER =
   /^(@anthropic-ai\/(bedrock|claude-agent|mcpb|sandbox-runtime|foundry|vertex)|@aws-sdk\/|google-auth-library$|url-handler-napi$|modifiers-napi$|audio-capture-napi$|doubaoime-asr$|@ant\/(claude-for-chrome-mcp|computer-use-)|^sharp$|@alcalzone\/ansi-tokenize|^follow-redirects$|^turndown$|^detect-libc$|^@smithy\/|^@azure\/|^react$|^react-dom$|^react-jsx$|^ink$|^@inkjs\/|^fflate$)/
 
+// Inlines the built web GUI assets (apps/web/dist) into the module that
+// serves them, so standalone binaries embed the frontend without a
+// filesystem. Bun.build cannot resolve ?raw imports, hence the module
+// replacement here.
+function createWebAssetsPlugin(): Bun.BunPlugin {
+  return {
+    name: "wren-web-assets",
+    setup(build) {
+      build.onLoad({ filter: /\/apps\/cli\/src\/web-assets\.ts$/ }, async () => {
+        const dist = join(REPO_ROOT, "apps", "web", "dist")
+        const html = await Bun.file(join(dist, "index.html")).text()
+        const js = await Bun.file(join(dist, "main.js")).text()
+        const css = await Bun.file(join(dist, "style.css")).text()
+        return {
+          contents: `export async function loadWebAssets() { return { html: ${JSON.stringify(html)}, js: ${JSON.stringify(js)}, css: ${JSON.stringify(css)} }; }`,
+          loader: "js",
+        }
+      })
+    },
+  }
+}
+
 const stubPlugin: Bun.BunPlugin = {
   name: "wren-stub",
   setup(build) {
@@ -207,7 +247,7 @@ try {
     compile: async (stagedOutfile) => {
       const result = await Bun.build({
         entrypoints: [join(__dirname, "src", "main.ts")],
-        plugins: [createSolidTransformPlugin(), stubPlugin],
+        plugins: [createSolidTransformPlugin(), createWebAssetsPlugin(), stubPlugin],
         external: [],
         minify: true,
         banner: followRedirectsShim,

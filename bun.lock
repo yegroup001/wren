@@ -94,6 +94,17 @@
         "commander": "^14.0.0",
       },
     },
+    "apps/web": {
+      "name": "@wren/web",
+      "version": "0.1.1",
+      "dependencies": {
+        "@wren/protocol": "workspace:*",
+        "highlight.js": "^11.11.1",
+        "marked": "^17.0.6",
+        "solid-js": "1.9.14",
+        "xss": "^1.0.15",
+      },
+    },
     "packages/adapter": {
       "name": "@wren/adapter",
       "version": "0.1.1",
@@ -488,6 +499,8 @@
     "@wren/storage": ["@wren/storage@workspace:packages/storage"],
 
     "@wren/tui": ["@wren/tui@workspace:packages/tui"],
+
+    "@wren/web": ["@wren/web@workspace:apps/web"],
 
     "accepts": ["accepts@2.0.0", "", { "dependencies": { "mime-types": "^3.0.0", "negotiator": "^1.0.0" } }, "sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng=="],
 
