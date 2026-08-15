@@ -1,15 +1,70 @@
-import type { Message } from "@wren/protocol"
+import type { Message, ToolStatusType } from "@wren/protocol"
+
+export type SubagentInfo = {
+  id: string
+  label: string
+  agentType: string
+  status: ToolStatusType
+  startedAt: string
+  agentId?: string | undefined
+}
+
+function recordValue(value: unknown): Record<string, unknown> | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined
+  return value as Record<string, unknown>
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined
+}
+
+function isWorking(status: ToolStatusType): boolean {
+  return status === "running" || status === "pending"
+}
+
+/** Subagent infos from tool_use parts (Agent tool only). */
+export function useSubagentInfos(messages: readonly Message[]): SubagentInfo[] {
+  const map = new Map<string, SubagentInfo>()
+  for (const message of messages) {
+    for (const part of message.parts) {
+      if (part.type !== "tool_use") continue
+      if (part.toolName.toLowerCase() !== "agent") continue
+      const input = recordValue(part.input)
+      const agentId = part.agentId
+      const description = stringValue(input?.description) ?? stringValue(input?.prompt) ?? "Agent"
+      const agentType = stringValue(input?.subagent_type) ?? "general-purpose"
+      const key = agentId ?? part.id
+      if (map.has(key)) continue
+      map.set(key, {
+        id: agentId ?? part.id,
+        label: description,
+        agentType,
+        status: part.status,
+        startedAt: message.createdAt,
+        agentId,
+      })
+    }
+  }
+  return [...map.values()]
+}
+
+/** Split subagents into working and retired groups. */
+export function splitSubagentGroups(infos: readonly SubagentInfo[]): {
+  working: SubagentInfo[]
+  retired: SubagentInfo[]
+} {
+  return {
+    working: infos.filter((s) => isWorking(s.status)),
+    retired: infos.filter((s) => !isWorking(s.status)).reverse(),
+  }
+}
 
 /** Unique subagent ids referenced by tool_use parts across messages. */
 export function useSubagentIds(messages: readonly Message[]): string[] {
-  const ids = new Set<string>()
-  for (const message of messages) {
-    for (const part of message.parts) {
-      if (part.type === "tool_use" && part.agentId !== undefined) ids.add(part.agentId)
-    }
-  }
-  return [...ids]
+  return useSubagentInfos(messages).map((s) => s.id)
 }
+
+// --- Legacy types/functions for deriveSubagentHeader (subagent view) ---
 
 type UsageBlock = {
   readonly input_tokens?: number
@@ -38,11 +93,6 @@ export type SubagentHeader = {
   readonly todo: { completed: number; total: number } | undefined
 }
 
-/**
- * Derives the subagent header (model, token total, latest todo summary) from
- * the raw transcript returned by /session/:sid/subagent/:agentId, mirroring
- * the TUI's subagent route.
- */
 export function deriveSubagentHeader(messages: readonly unknown[]): SubagentHeader {
   let model: string | undefined
   let tokenTotal = 0

@@ -3,6 +3,7 @@ import { createMemo, createSignal, For, Show } from "solid-js"
 import type { WebStore } from "../store"
 import { parseCompactSummaryText } from "../utils/folds"
 import { renderMarkdown } from "../utils/markdown"
+import { formatClock } from "../utils/time"
 import { ToolCallCard } from "./tool-call"
 
 function Markdown(props: { readonly text: string; readonly class?: string }) {
@@ -95,7 +96,17 @@ function UserMessageView(props: {
 }) {
   return (
     <div class="message user">
-      <div class="message-role">You</div>
+      <div class="message-role">
+        You <span class="message-time">{formatClock(props.message.createdAt)}</span>
+        <button
+          type="button"
+          class="message-edit"
+          title="Edit and resend"
+          onClick={() => props.onEdit(props.message)}
+        >
+          ✎ edit
+        </button>
+      </div>
       <div class="message-body">
         <For each={props.message.parts}>
           {(part) => (
@@ -105,14 +116,6 @@ function UserMessageView(props: {
           )}
         </For>
       </div>
-      <button
-        type="button"
-        class="message-edit"
-        title="Edit and resend"
-        onClick={() => props.onEdit(props.message)}
-      >
-        edit
-      </button>
     </div>
   )
 }
@@ -120,7 +123,7 @@ function UserMessageView(props: {
 function AssistantMessageView(props: { readonly message: Message; readonly streaming: boolean }) {
   return (
     <div class="message assistant">
-      <div class="message-role">Wren</div>
+      <div class="message-role">Wren <span class="message-time">{formatClock(props.message.createdAt)}</span></div>
       <div class="message-body">
         <Show when={props.message.error !== undefined}>
           <div class="message-error">Error: {props.message.error}</div>

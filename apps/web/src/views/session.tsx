@@ -19,7 +19,7 @@ import { SubagentPanel } from "../components/subagent-panel"
 import { TodoList } from "../components/todo-list"
 import { Transcript } from "../components/transcript"
 import type { WebStore } from "../store"
-import { useSubagentIds } from "../utils/subagent"
+import { useSubagentInfos } from "../utils/subagent"
 
 function StatusBadge(props: { readonly status: SessionStatusLike }) {
   const label = () =>
@@ -63,7 +63,7 @@ export function SessionView(props: { readonly store: WebStore; readonly sessionI
   const [menuOpen, setMenuOpen] = createSignal(false)
   const [editingMessage, setEditingMessage] = createSignal<Message | undefined>(undefined)
 
-  const subagentIds = createMemo(() => useSubagentIds(messages()))
+  const subagentInfos = createMemo(() => useSubagentInfos(messages()))
   const activePermission = createMemo(() => {
     const list = permissions()
     return list.length > 0 ? (list[list.length - 1] ?? list[0]) : undefined
@@ -283,7 +283,7 @@ export function SessionView(props: { readonly store: WebStore; readonly sessionI
           <Show when={sidebarTab() === "subagents"}>
             <SubagentPanel
               sessionId={sid}
-              agents={subagentIds()}
+              agents={subagentInfos()}
               onOpen={(agentId) => navigate({ name: "subagent", sessionId: sid, agentId })}
             />
           </Show>

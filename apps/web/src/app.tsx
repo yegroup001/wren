@@ -44,8 +44,33 @@ function ConnectionBadge(props: { readonly store: WebStore }) {
   )
 }
 
+type Theme = "dark" | "light"
+
+const THEME_KEY = "wren-theme"
+
+function getInitialTheme(): Theme {
+  try {
+    const saved = localStorage.getItem(THEME_KEY)
+    if (saved === "dark" || saved === "light") return saved
+  } catch {
+    // localStorage unavailable
+  }
+  if (window.matchMedia?.("(prefers-color-scheme: light)").matches) return "light"
+  return "dark"
+}
+
 export function App(props: { readonly store: WebStore }) {
   const [route, setRoute] = createSignal<Route>(parseHash())
+  const [theme, setTheme] = createSignal<Theme>(getInitialTheme())
+
+  createEffect(() => {
+    document.documentElement.dataset.theme = theme()
+    try {
+      localStorage.setItem(THEME_KEY, theme())
+    } catch {
+      // storage unavailable
+    }
+  })
 
   onMount(() => {
     const onChange = () => setRoute(parseHash())
@@ -82,6 +107,14 @@ export function App(props: { readonly store: WebStore }) {
           </button>
         </Show>
         <span class="app-header-spacer" />
+        <button
+          type="button"
+          class="icon-btn theme-toggle"
+          title="Toggle theme"
+          onClick={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
+        >
+          {theme() === "dark" ? "☀" : "☾"}
+        </button>
         <ConnectionBadge store={props.store} />
       </header>
       <main class="app-main">{view()}</main>

@@ -11,7 +11,8 @@ function FileDiffView(props: { readonly file: SnapshotFileDiff }) {
       <div class="file-diff-path">
         {props.file.path}
         <span class="file-diff-stats">
-          +{props.file.added} -{props.file.removed}
+          <span class="diff-add-count">+{props.file.added}</span>{" "}
+          <span class="diff-del-count">-{props.file.removed}</span>
         </span>
       </div>
       <pre class="file-diff-body">
@@ -54,7 +55,8 @@ export function DiffPanel(props: { readonly diff: Diff | undefined }) {
           >
             <span class="diff-file-name">{file.path}</span>
             <span class="file-diff-stats">
-              +{file.added} -{file.removed}
+              <span class="diff-add-count">+{file.added}</span>{" "}
+              <span class="diff-del-count">-{file.removed}</span>
             </span>
           </button>
         )}

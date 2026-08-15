@@ -16,7 +16,12 @@ export function HomeView(props: { readonly store: WebStore }) {
 
   const filtered = createMemo(() => {
     const q = query().toLowerCase()
-    const sessions = props.store.state.sessions
+    const previews = props.store.state.previews
+    const sessions = [...props.store.state.sessions].sort((a, b) => {
+      const ta = previews[a.id]?.createdAt ?? ""
+      const tb = previews[b.id]?.createdAt ?? ""
+      return tb.localeCompare(ta)
+    })
     if (q === "") return sessions
     return sessions.filter(
       (session) =>

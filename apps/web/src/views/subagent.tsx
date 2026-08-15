@@ -1,28 +1,77 @@
-import { createEffect, createSignal, For, Show } from "solid-js"
+import type { Message, Part } from "@wren/protocol"
+import { parseMessageId, parsePartId } from "@wren/protocol"
+import { createEffect, createMemo, createSignal, Show } from "solid-js"
 import { api } from "../api"
 import { navigate } from "../app"
 import type { WebStore } from "../store"
-import { renderMarkdown } from "../utils/markdown"
 import { deriveSubagentHeader } from "../utils/subagent"
+import { Transcript } from "../components/transcript"
 
-type TranscriptBlock = {
-  readonly type?: string
-  readonly text?: string
-  readonly name?: string
-  readonly input?: unknown
-  readonly content?: readonly unknown[]
+type ContentBlock =
+  | { type: "text"; text: string }
+  | { type: "thinking"; thinking: string; signature?: string }
+  | { type: "tool_use"; id: string; name: string; input: unknown }
+  | { type: "tool_result"; tool_use_id: string; content: unknown }
+
+interface EngineMessage {
+  type: string
+  message?: {
+    role?: string
+    content?: ContentBlock[] | string
+    model?: string
+    usage?: Record<string, number>
+  }
+  uuid: string
+  timestamp?: string
 }
 
-type TranscriptMessage = {
-  readonly role?: string
-  readonly message?: {
-    readonly role?: string
-    readonly content?: readonly TranscriptBlock[]
-    readonly model?: string
+function contentBlockToPart(block: ContentBlock, uuid: string, index: number): Part {
+  switch (block.type) {
+    case "text":
+      return { type: "text", id: parsePartId(`part_sa_${uuid}_${index}`), text: block.text }
+    case "thinking":
+      return {
+        type: "thinking",
+        id: parsePartId(`part_sa_${uuid}_${index}`),
+        text: block.thinking,
+        signature: block.signature,
+      }
+    case "tool_use":
+      return {
+        type: "tool_use",
+        id: parsePartId(`part_sa_${uuid}_${index}`),
+        toolName: block.name,
+        input: block.input,
+        status: "completed",
+      }
+    case "tool_result":
+      return {
+        type: "tool_result",
+        id: parsePartId(`part_sa_${uuid}_${index}`),
+        toolUseId: block.tool_use_id,
+        content: block.content,
+      }
   }
-  readonly type?: string
-  readonly subtype?: string
-  readonly cwd?: string
+}
+
+function extractParts(msg: EngineMessage): Part[] {
+  const content = msg.message?.content
+  if (typeof content === "string") {
+    return [{ type: "text", id: parsePartId(`part_sa_${msg.uuid}_0`), text: content }]
+  }
+  if (!Array.isArray(content)) return []
+  return content.map((block, i) => contentBlockToPart(block, msg.uuid, i))
+}
+
+function toMessage(msg: EngineMessage, index: number): Message {
+  const role = msg.message?.role ?? "unknown"
+  return {
+    id: parseMessageId(`msg_sa_${msg.uuid}_${index}`),
+    sessionId: "" as never,
+    role: role as Message["role"],
+    parts: extractParts(msg),
+    createdAt: msg.timestamp ?? new Date(0).toISOString(),
+  }
 }
 
 function formatTokens(total: number): string {
@@ -31,48 +80,25 @@ function formatTokens(total: number): string {
   return `${total}`
 }
 
-function blockText(block: TranscriptBlock): string {
-  if (block.type === "text" && typeof block.text === "string") return block.text
-  if (block.type === "tool_use") {
-    const name = block.name ?? "tool"
-    return `[${name}] ${JSON.stringify(block.input ?? {})}`
-  }
-  if (block.type === "tool_result") {
-    const content = block.content
-    if (typeof content === "string") return content
-    if (Array.isArray(content)) {
-      return content
-        .map((c) => {
-          if (c === null || typeof c !== "object") return String(c)
-          const b = c as { text?: string }
-          return typeof b.text === "string" ? b.text : ""
-        })
-        .join("\n")
-    }
-    return JSON.stringify(content)
-  }
-  return ""
-}
-
 export function SubagentView(props: {
   readonly store: WebStore
   readonly sessionId: string
   readonly agentId: string
 }) {
-  const [messages, setMessages] = createSignal<readonly TranscriptMessage[]>([])
+  const [rawMessages, setRawMessages] = createSignal<readonly EngineMessage[]>([])
   const [loading, setLoading] = createSignal(true)
   const [error, setError] = createSignal<string | undefined>(undefined)
 
   createEffect(() => {
     let cancelled = false
-    setMessages([])
+    setRawMessages([])
     setError(undefined)
     setLoading(true)
     void (async () => {
       try {
         const data = await api.getSubagent(props.sessionId, props.agentId)
         if (cancelled) return
-        setMessages((data.messages ?? []) as TranscriptMessage[])
+        setRawMessages((data.messages ?? []) as EngineMessage[])
       } catch (cause) {
         if (cancelled) return
         setError(cause instanceof Error ? cause.message : String(cause))
@@ -83,7 +109,17 @@ export function SubagentView(props: {
     return () => { cancelled = true }
   })
 
-  const header = () => deriveSubagentHeader(messages() as unknown[])
+  const messages = createMemo<readonly Message[]>(() =>
+    rawMessages()
+      .filter(
+        (msg) => msg?.message?.role !== undefined || typeof msg?.message?.content === "string",
+      )
+      .map((msg, i) => toMessage(msg, i))
+      .filter((m) => m.parts.length > 0),
+  )
+
+  const header = () => deriveSubagentHeader(rawMessages() as unknown[])
+  const sessionTitle = () => props.store.state.titles[props.sessionId]
 
   return (
     <div class="subagent-view">
@@ -95,8 +131,10 @@ export function SubagentView(props: {
         >
           ←
         </button>
-        <span class="session-cwd">Subagent</span>
-        <span class="subagent-id badge">{props.agentId}</span>
+        <span class="session-cwd" title={sessionTitle()}>
+          {sessionTitle() ?? "Subagent"}
+        </span>
+        <span class="subagent-id badge">{props.agentId.slice(0, 8)}</span>
         <Show when={header().model !== undefined}>
           <span class="session-permission-mode">{header().model}</span>
         </Show>
@@ -118,25 +156,18 @@ export function SubagentView(props: {
         <Show when={error() !== undefined}>
           <div class="message-error">{error()}</div>
         </Show>
-        <For each={messages()}>
-          {(message) => (
-            <div class={`subagent-message ${message.role === "user" ? "user" : "assistant"}`}>
-              <div class="message-role">{message.role === "user" ? "User" : "Wren"}</div>
-              <div class="message-body">
-                <For each={message.message?.content ?? []}>
-                  {(block) => (
-                    <div>
-                      {block.type === "text" && (
-                        <div class="markdown" innerHTML={renderMarkdown(block.text ?? "")} />
-                      )}
-                      {block.type !== "text" && <pre class="json-block">{blockText(block)}</pre>}
-                    </div>
-                  )}
-                </For>
-              </div>
-            </div>
-          )}
-        </For>
+        <Show when={!loading() && messages().length === 0 && error() === undefined}>
+          <div class="loading-hint">No transcript available</div>
+        </Show>
+        <Show when={messages().length > 0}>
+          <Transcript
+            store={props.store}
+            sessionId={props.sessionId}
+            messages={messages() as Message[]}
+            status={{ type: "idle" }}
+            onEdit={() => {}}
+          />
+        </Show>
       </div>
     </div>
   )

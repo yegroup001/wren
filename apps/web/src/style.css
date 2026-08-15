@@ -16,8 +16,38 @@
   --info: #58a6ff;
   --add: #3fb950;
   --del: #f85149;
+  --shadow: rgba(0, 0, 0, 0.15);
+  --shadow-lg: rgba(0, 0, 0, 0.5);
+  --overlay: rgba(0, 0, 0, 0.55);
+  --diff-add-bg: rgba(63, 185, 80, 0.12);
+  --diff-del-bg: rgba(248, 81, 73, 0.12);
   --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+[data-theme="light"] {
+  --bg: #f5f6f8;
+  --bg-raised: #ffffff;
+  --bg-hover: #e8eaef;
+  --border: #d4d9e3;
+  --border-dim: #e4e7ed;
+  --text: #1a1d24;
+  --text-dim: #4a5260;
+  --text-muted: #8b95a5;
+  --accent: #2b6cb0;
+  --accent-dim: #dbeafe;
+  --danger: #c53030;
+  --success: #2f855a;
+  --warning: #b7791f;
+  --thinking: #6b46c1;
+  --info: #2b6cb0;
+  --add: #2f855a;
+  --del: #c53030;
+  --shadow: rgba(0, 0, 0, 0.08);
+  --shadow-lg: rgba(0, 0, 0, 0.15);
+  --overlay: rgba(0, 0, 0, 0.25);
+  --diff-add-bg: rgba(47, 133, 90, 0.10);
+  --diff-del-bg: rgba(197, 48, 48, 0.10);
 }
 
 * {
@@ -92,6 +122,11 @@ button {
 
 .nav-home:hover {
   background: var(--bg-hover);
+}
+
+.theme-toggle {
+  font-size: 15px;
+  line-height: 1;
 }
 
 .connection-badge {
@@ -456,6 +491,12 @@ button {
   color: var(--info);
 }
 
+.message-time {
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
 .message-body {
   min-width: 0;
 }
@@ -470,22 +511,19 @@ button {
 }
 
 .message-edit {
-  align-self: flex-start;
   font-size: 12px;
   color: var(--text-muted);
-  padding: 1px 8px;
+  padding: 1px 6px;
   border-radius: 4px;
-  opacity: 0;
-  transition: opacity 0.1s;
-}
-
-.message:hover .message-edit {
-  opacity: 1;
+  margin-left: 8px;
+  border: 1px solid var(--border);
+  line-height: 1.4;
 }
 
 .message-edit:hover {
   background: var(--bg-hover);
   color: var(--text);
+  border-color: var(--accent);
 }
 
 .message.system .message-body {
@@ -586,7 +624,7 @@ button {
   border-radius: 8px;
   margin: 8px 0;
   background: var(--bg-raised);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px var(--shadow);
 }
 
 .tool-card.failed {
@@ -632,6 +670,22 @@ button {
   font-weight: 600;
 }
 
+.tool-detail-inline {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.tool-output-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
 .tool-status {
   margin-left: auto;
   font-size: 12px;
@@ -648,6 +702,51 @@ button {
 
 .tool-status.failed {
   color: var(--danger);
+}
+
+.tool-status.pending {
+  color: var(--text-muted);
+}
+
+.tool-diff {
+  font-family: var(--mono);
+  font-size: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  overflow-x: auto;
+  margin: 0;
+  white-space: pre;
+}
+
+.tool-todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tool-todo-item {
+  display: flex;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.tool-todo-item.completed {
+  color: var(--text-muted);
+}
+
+.tool-todo-item.completed .tool-todo-marker {
+  color: var(--success);
+}
+
+.tool-todo-item.in_progress .tool-todo-marker {
+  color: var(--warning);
+}
+
+.tool-todo-marker {
+  flex-shrink: 0;
+  width: 14px;
 }
 
 .tool-agent {
@@ -899,6 +998,14 @@ button {
   flex-shrink: 0;
 }
 
+.diff-add-count {
+  color: var(--add);
+}
+
+.diff-del-count {
+  color: var(--del);
+}
+
 .file-diff {
   margin-top: 8px;
 }
@@ -921,12 +1028,12 @@ button {
 }
 
 .diff-line.add {
-  background: rgba(63, 185, 80, 0.12);
+  background: var(--diff-add-bg);
   color: var(--add);
 }
 
 .diff-line.del {
-  background: rgba(248, 81, 73, 0.12);
+  background: var(--diff-del-bg);
   color: var(--del);
 }
 
@@ -935,31 +1042,75 @@ button {
   padding: 8px;
 }
 
-.subagent-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  padding: 8px;
-  border-radius: 6px;
-  font-size: 13px;
+.subagent-group-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 8px 4px 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.subagent-row:hover {
+.subagent-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  text-align: left;
+}
+
+.subagent-row:hover:not(:disabled) {
   background: var(--bg-hover);
+}
+
+.subagent-row:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.subagent-status {
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+}
+
+.subagent-status.running {
+  color: var(--warning);
+}
+
+.subagent-status.completed {
+  color: var(--success);
+}
+
+.subagent-status.failed {
+  color: var(--danger);
+}
+
+.subagent-status.pending {
+  color: var(--text-muted);
 }
 
 .subagent-id {
   font-family: var(--mono);
   color: var(--thinking);
+  flex-shrink: 0;
+  font-size: 12px;
+}
+
+.subagent-desc {
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text-dim);
 }
 
 .subagent-open {
   color: var(--text-muted);
   font-size: 12px;
+  flex-shrink: 0;
 }
 
 .badge {
@@ -1001,7 +1152,7 @@ button {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1023,7 +1174,7 @@ button {
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 12px 40px var(--shadow-lg);
   animation: modal-in 0.14s ease-out;
 }
 
@@ -1170,7 +1321,7 @@ button {
   background: var(--bg-raised);
   border: 1px solid var(--border);
   border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 24px var(--shadow-lg);
   display: flex;
   flex-direction: column;
   gap: 2px;
