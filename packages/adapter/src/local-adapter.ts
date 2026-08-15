@@ -973,6 +973,7 @@ export function createWrenAdapter(engine: WrenEngine, options?: WrenAdapterOptio
           )
         }
       } else {
+        await ensureSessionLoaded(sessionId)
         const engineCount = getEngine(sessionId).getMessages().length
         const messageId = recordUserPrompt(sessionId, prompt, engineCount, true)
         runtime.queuedPrompts.push({
