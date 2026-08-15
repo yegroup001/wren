@@ -1,8 +1,9 @@
 :root {
-  --bg: #16181d;
-  --bg-raised: #1d2026;
-  --bg-hover: #242832;
-  --border: #2e3340;
+  --bg: #0f1115;
+  --bg-raised: #1a1d24;
+  --bg-hover: #252a35;
+  --border: #303544;
+  --border-dim: #252936;
   --text: #d7dce5;
   --text-dim: #9aa3b2;
   --text-muted: #6b7280;
@@ -28,6 +29,21 @@ body,
 #app {
   margin: 0;
   height: 100%;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }
 
 body {
@@ -137,6 +153,15 @@ button {
 .btn:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+.btn:active:not(:disabled),
+.btn.primary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.icon-btn:active {
+  transform: translateY(1px);
 }
 
 .icon-btn {
@@ -403,6 +428,22 @@ button {
   gap: 6px;
 }
 
+.message.user {
+  align-items: flex-end;
+}
+
+.message.user .message-body {
+  background: var(--bg-raised);
+  border: 1px solid var(--border-dim);
+  border-radius: 12px 12px 2px 12px;
+  padding: 10px 14px;
+  max-width: 80%;
+}
+
+.message.assistant .message-body {
+  max-width: 100%;
+}
+
 .message-role {
   font-size: 12px;
   font-weight: 700;
@@ -472,6 +513,24 @@ button {
   color: var(--text-muted);
   padding: 24px;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.loading-hint::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* ---------- folds / thinking / compaction ---------- */
@@ -527,6 +586,7 @@ button {
   border-radius: 8px;
   margin: 8px 0;
   background: var(--bg-raised);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .tool-card.failed {
@@ -654,6 +714,10 @@ button {
 
 .markdown > :last-child {
   margin-bottom: 0;
+}
+
+.message.user .markdown p {
+  margin: 4px 0;
 }
 
 .markdown pre {
@@ -937,11 +1001,17 @@ button {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
+  animation: overlay-in 0.12s ease-out;
+}
+
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .modal {
@@ -954,6 +1024,12 @@ button {
   display: flex;
   flex-direction: column;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  animation: modal-in 0.14s ease-out;
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.97) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .modal-header {
@@ -1080,6 +1156,46 @@ button {
 
 .danger-action {
   color: var(--danger);
+}
+
+.header-menu {
+  position: relative;
+}
+
+.header-menu-dropdown {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  z-index: 60;
+  min-width: 140px;
+}
+
+.header-menu-item {
+  text-align: left;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.header-menu-item:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.header-menu-item:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .permission-select {

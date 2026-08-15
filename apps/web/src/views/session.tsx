@@ -6,7 +6,7 @@ import type {
   Session,
   Todo,
 } from "@wren/protocol"
-import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js"
+import { createEffect, createMemo, createSignal, For, onMount, Show } from "solid-js"
 import { api } from "../api"
 import { navigate } from "../app"
 import { DiffPanel } from "../components/diff-panel"
@@ -60,6 +60,7 @@ export function SessionView(props: { readonly store: WebStore; readonly sessionI
   const [showStatusDialog, setShowStatusDialog] = createSignal(false)
   const [sidebarTab, setSidebarTab] = createSignal<"todos" | "changes" | "subagents">("todos")
   const [sidebarOpen, setSidebarOpen] = createSignal(false)
+  const [menuOpen, setMenuOpen] = createSignal(false)
   const [editingMessage, setEditingMessage] = createSignal<Message | undefined>(undefined)
 
   const subagentIds = createMemo(() => useSubagentIds(messages()))
@@ -170,58 +171,50 @@ export function SessionView(props: { readonly store: WebStore; readonly sessionI
           )}
         </Show>
         <span class="app-header-spacer" />
-        <button
-          type="button"
-          class="header-action"
-          title="Rename session"
-          onClick={() => setShowRenameDialog(true)}
-        >
-          Rename
-        </button>
-        <button
-          type="button"
-          class="header-action"
-          title="Session goal"
-          onClick={() => setShowGoalDialog(true)}
-        >
-          Goal
-        </button>
-        <button
-          type="button"
-          class="header-action"
-          title="Export conversation as markdown"
-          onClick={() => void exportSession()}
-        >
-          Export
-        </button>
-        <button
-          type="button"
-          class="header-action"
-          title="Session status"
-          onClick={() => setShowStatusDialog(true)}
-        >
-          Status
-        </button>
-        <button
-          type="button"
-          class="header-action"
-          disabled={busy() || messages().length === 0}
-          title="Retry the last turn"
-          onClick={() => void api.retry(sid)}
-        >
-          Retry
-        </button>
-        <button
-          type="button"
-          class="header-action danger-action"
-          disabled={busy()}
-          title="Clear the conversation"
-          onClick={() => {
-            if (window.confirm("Clear this session's messages?")) void api.clear(sid)
-          }}
-        >
-          Clear
-        </button>
+        <div class="header-menu">
+          <button
+            type="button"
+            class="header-action"
+            title="More actions"
+            onClick={() => setMenuOpen((prev) => !prev)}
+          >
+            ☰
+          </button>
+          <Show when={menuOpen()}>
+            <div class="header-menu-dropdown" onClick={() => setMenuOpen(false)}>
+              <button type="button" class="header-menu-item" onClick={() => setShowRenameDialog(true)}>
+                Rename
+              </button>
+              <button type="button" class="header-menu-item" onClick={() => setShowGoalDialog(true)}>
+                Goal
+              </button>
+              <button type="button" class="header-menu-item" onClick={() => void exportSession()}>
+                Export
+              </button>
+              <button type="button" class="header-menu-item" onClick={() => setShowStatusDialog(true)}>
+                Status
+              </button>
+              <button
+                type="button"
+                class="header-menu-item"
+                disabled={busy() || messages().length === 0}
+                onClick={() => void api.retry(sid)}
+              >
+                Retry
+              </button>
+              <button
+                type="button"
+                class="header-menu-item danger-action"
+                disabled={busy()}
+                onClick={() => {
+                  if (window.confirm("Clear this session's messages?")) void api.clear(sid)
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          </Show>
+        </div>
         <Show when={busy()}>
           <button type="button" class="btn danger" onClick={() => void api.abort(sid)}>
             Abort
