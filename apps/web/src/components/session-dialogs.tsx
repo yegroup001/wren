@@ -1,7 +1,7 @@
 import type { Session } from "@wren/protocol"
 import { createSignal, Show } from "solid-js"
 import { api } from "../api"
-import { useEscape } from "../utils/escape"
+import { useBodyScrollLock, useEscape } from "../utils/escape"
 
 export function RenameDialog(props: {
   readonly session: Session
@@ -13,6 +13,7 @@ export function RenameDialog(props: {
   const [error, setError] = createSignal<string | undefined>(undefined)
 
   useEscape(props.onClose)
+  useBodyScrollLock()
 
   async function save(): Promise<void> {
     if (busy()) return
@@ -69,6 +70,7 @@ export function GoalDialog(props: { readonly sessionId: string; readonly onClose
   const [error, setError] = createSignal<string | undefined>(undefined)
 
   useEscape(props.onClose)
+  useBodyScrollLock()
 
   async function refresh(): Promise<void> {
     try {
@@ -178,6 +180,7 @@ export function StatusDialog(props: { readonly sessionId: string; readonly onClo
   >(undefined)
 
   useEscape(props.onClose)
+  useBodyScrollLock()
 
   void api
     .getContext(props.sessionId)

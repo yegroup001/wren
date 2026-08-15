@@ -10,3 +10,14 @@ export function useEscape(handler: () => void): void {
     onCleanup(() => window.removeEventListener("keydown", onKey))
   })
 }
+
+/** Locks body scroll while the component is mounted. */
+export function useBodyScrollLock(): void {
+  onMount(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    onCleanup(() => {
+      document.body.style.overflow = prev
+    })
+  })
+}

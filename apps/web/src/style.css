@@ -1240,3 +1240,10 @@ button {
 .session-row-main:hover .session-row-cwd {
   color: var(--accent);
 }
+
+.home-empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 48px 16px;
+  font-size: 14px;
+}

@@ -1,6 +1,7 @@
 import type { QuestionRequest } from "@wren/protocol"
 import { createSignal, For, Show } from "solid-js"
 import { api } from "../api"
+import { useBodyScrollLock } from "../utils/escape"
 
 export function QuestionModal(props: {
   readonly sessionId: string
@@ -11,11 +12,19 @@ export function QuestionModal(props: {
   const [busy, setBusy] = createSignal(false)
   const [error, setError] = createSignal<string | undefined>(undefined)
 
+  useBodyScrollLock()
+
+  const multi = () => props.request.multiSelect ?? false
+
   function toggleOption(id: string): void {
-    const next = new Set(selected())
-    if (next.has(id)) next.delete(id)
-    else next.add(id)
-    setSelected(next)
+    if (multi()) {
+      const next = new Set(selected())
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      setSelected(next)
+    } else {
+      setSelected(new Set([id]))
+    }
   }
 
   async function submit(rejected: boolean): Promise<void> {

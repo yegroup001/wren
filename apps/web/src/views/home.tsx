@@ -3,7 +3,7 @@ import { createMemo, createSignal, For, Show } from "solid-js"
 import { api, previewFor } from "../api"
 import { navigate } from "../app"
 import type { WebStore } from "../store"
-import { useEscape } from "../utils/escape"
+import { useBodyScrollLock, useEscape } from "../utils/escape"
 import { formatTime } from "../utils/time"
 
 export function HomeView(props: { readonly store: WebStore }) {
@@ -83,6 +83,10 @@ export function HomeView(props: { readonly store: WebStore }) {
         </div>
       </Show>
 
+      <Show when={filtered().length === 0}>
+        <div class="home-empty">No sessions yet — create one to get started</div>
+      </Show>
+
       <ul class="session-list">
         <For each={filtered()}>
           {(session) => (
@@ -148,6 +152,7 @@ function RenameModal(props: {
   readonly onClose: () => void
 }) {
   useEscape(props.onClose)
+  useBodyScrollLock()
   return (
     <div class="modal-overlay" onClick={props.onClose}>
       <div class="modal" onClick={(e) => e.stopPropagation()}>

@@ -103,11 +103,17 @@ export function SessionView(props: { readonly store: WebStore; readonly sessionI
     setStickToBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 80)
   }
 
+  let contextTimer: ReturnType<typeof setTimeout> | undefined
   createEffect(() => {
     void messages()
     void status()
     const el = transcriptRef
     if (el !== undefined && stickToBottom()) el.scrollTop = el.scrollHeight
+    // Refresh context stats when message count changes (debounced)
+    if (contextTimer !== undefined) clearTimeout(contextTimer)
+    contextTimer = setTimeout(() => {
+      void api.getContext(sid).then(setContextStats).catch(() => {})
+    }, 500)
   })
 
 

@@ -1,7 +1,7 @@
 import type { ModelCatalogEntry } from "@wren/protocol"
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js"
 import { api } from "../api"
-import { useEscape } from "../utils/escape"
+import { useBodyScrollLock, useEscape } from "../utils/escape"
 
 type DisplayEntry = {
   readonly id: string
@@ -41,6 +41,7 @@ export function ModelDialog(props: {
   const [error, setError] = createSignal<string | undefined>(undefined)
 
   useEscape(props.onClose)
+  useBodyScrollLock()
 
   createEffect(() => {
     void api

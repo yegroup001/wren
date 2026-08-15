@@ -1,5 +1,5 @@
 import type { Message } from "@wren/protocol"
-import { createEffect, createSignal, Show } from "solid-js"
+import { createEffect, createSignal, onMount, Show } from "solid-js"
 import { api } from "../api"
 import type { WebStore } from "../store"
 import { messageText } from "../utils/folds"
@@ -28,6 +28,10 @@ export function PromptBox(props: {
   const [error, setError] = createSignal<string | undefined>(undefined)
 
   let textareaRef: HTMLTextAreaElement | undefined
+
+  onMount(() => {
+    if (!props.busy) textareaRef?.focus()
+  })
 
   // When an edit starts, load the message text into the box.
   createEffect(() => {

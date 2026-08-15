@@ -1,6 +1,7 @@
 import type { PermissionRequest } from "@wren/protocol"
 import { createSignal, Show } from "solid-js"
 import { api } from "../api"
+import { useBodyScrollLock } from "../utils/escape"
 import { renderMarkdown } from "../utils/markdown"
 
 function describeInput(input: unknown): string {
@@ -18,6 +19,8 @@ export function PermissionModal(props: {
 }) {
   const [busy, setBusy] = createSignal(false)
   const [error, setError] = createSignal<string | undefined>(undefined)
+
+  useBodyScrollLock()
 
   async function respond(response: "once" | "session" | "deny"): Promise<void> {
     if (busy()) return
