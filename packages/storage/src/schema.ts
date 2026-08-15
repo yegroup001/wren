@@ -1,7 +1,7 @@
 
 export const PRAGMAS = [
   "PRAGMA journal_mode = WAL",
-  "PRAGMA synchronous = NORMAL",
+  "PRAGMA synchronous = FULL",
   "PRAGMA busy_timeout = 5000",
   "PRAGMA foreign_keys = ON",
   "PRAGMA cache_size = -64000",
