@@ -1,6 +1,7 @@
 import type { ModelCatalogEntry } from "@wren/protocol"
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js"
 import { api } from "../api"
+import { useEscape } from "../utils/escape"
 
 type DisplayEntry = {
   readonly id: string
@@ -39,6 +40,8 @@ export function ModelDialog(props: {
   const [busy, setBusy] = createSignal(false)
   const [error, setError] = createSignal<string | undefined>(undefined)
 
+  useEscape(props.onClose)
+
   createEffect(() => {
     void api
       .getModels()
@@ -76,18 +79,8 @@ export function ModelDialog(props: {
   }
 
   return (
-    <div
-      class="modal-overlay"
-      onClick={props.onClose}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") props.onClose()
-      }}
-    >
-      <div
-        class="modal"
-        onClick={(event) => event.stopPropagation()}
-        onKeyDown={(event) => event.stopPropagation()}
-      >
+    <div class="modal-overlay" onClick={props.onClose}>
+      <div class="modal" onClick={(e) => e.stopPropagation()}>
         <div class="modal-header">
           <span class="modal-title">Model</span>
           <button type="button" class="icon-btn" onClick={props.onClose}>

@@ -3,6 +3,7 @@ import { createMemo, createSignal, For, Show } from "solid-js"
 import { api, previewFor } from "../api"
 import { navigate } from "../app"
 import type { WebStore } from "../store"
+import { useEscape } from "../utils/escape"
 import { formatTime } from "../utils/time"
 
 export function HomeView(props: { readonly store: WebStore }) {
@@ -94,7 +95,7 @@ export function HomeView(props: { readonly store: WebStore }) {
                 <span class="session-row-cwd">
                   {props.store.state.titles[session.id] ?? session.cwd}
                 </span>
-                <span class="session-row-model">{session.cwd}</span>
+                <span class="session-row-model">{session.modelId}</span>
                 <Show when={previewFor(session.id, props.store.state.previews) !== undefined}>
                   <span class="session-row-preview">
                     {previewFor(session.id, props.store.state.previews)}
@@ -129,59 +130,60 @@ export function HomeView(props: { readonly store: WebStore }) {
       </ul>
 
       <Show when={renaming() !== undefined}>
-        <div
-          class="modal-overlay"
-          onClick={() => setRenaming(undefined)}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") setRenaming(undefined)
-          }}
-        >
-          <div
-            class="modal"
-            onClick={(event) => event.stopPropagation()}
-            onKeyDown={(event) => event.stopPropagation()}
-          >
-            <div class="modal-header">
-              <span class="modal-title">Rename session</span>
-              <button type="button" class="icon-btn" onClick={() => setRenaming(undefined)}>
-                ×
-              </button>
-            </div>
-            <div class="modal-body">
-              <input
-                class="search-input question-custom"
-                type="text"
-                value={renameValue()}
-                onInput={(event) => setRenameValue(event.currentTarget.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    const session = renaming()
-                    if (session !== undefined) {
-                      void api.renameSession(session.id, renameValue().trim())
-                      setRenaming(undefined)
-                    }
-                  }
-                }}
-              />
-            </div>
-            <div class="modal-footer">
-              <button
-                type="button"
-                class="btn primary"
-                onClick={() => {
-                  const session = renaming()
-                  if (session !== undefined) {
-                    void api.renameSession(session.id, renameValue().trim())
-                    setRenaming(undefined)
-                  }
-                }}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
+        <RenameModal
+          session={renaming()!}
+          value={renameValue()}
+          onValue={setRenameValue}
+          onClose={() => setRenaming(undefined)}
+        />
       </Show>
+    </div>
+  )
+}
+
+function RenameModal(props: {
+  readonly session: Session
+  readonly value: string
+  readonly onValue: (v: string) => void
+  readonly onClose: () => void
+}) {
+  useEscape(props.onClose)
+  return (
+    <div class="modal-overlay" onClick={props.onClose}>
+      <div class="modal" onClick={(e) => e.stopPropagation()}>
+        <div class="modal-header">
+          <span class="modal-title">Rename session</span>
+          <button type="button" class="icon-btn" onClick={props.onClose}>
+            ×
+          </button>
+        </div>
+        <div class="modal-body">
+          <input
+            class="search-input question-custom"
+            type="text"
+            value={props.value}
+            onInput={(e) => props.onValue(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                void api.renameSession(props.session.id, props.value.trim())
+                props.onClose()
+              }
+            }}
+          />
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn primary"
+            onClick={() => {
+              void api.renameSession(props.session.id, props.value.trim())
+              props.onClose()
+            }}
+          >
+            Save
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

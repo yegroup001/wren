@@ -64,21 +64,23 @@ export function SubagentView(props: {
   const [error, setError] = createSignal<string | undefined>(undefined)
 
   createEffect(() => {
-    const controller = new AbortController()
+    let cancelled = false
     setMessages([])
     setError(undefined)
     setLoading(true)
     void (async () => {
       try {
         const data = await api.getSubagent(props.sessionId, props.agentId)
+        if (cancelled) return
         setMessages((data.messages ?? []) as TranscriptMessage[])
       } catch (cause) {
+        if (cancelled) return
         setError(cause instanceof Error ? cause.message : String(cause))
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     })()
-    return () => controller.abort()
+    return () => { cancelled = true }
   })
 
   const header = () => deriveSubagentHeader(messages() as unknown[])

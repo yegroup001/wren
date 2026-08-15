@@ -1,6 +1,7 @@
 import type { Session } from "@wren/protocol"
 import { createSignal, Show } from "solid-js"
 import { api } from "../api"
+import { useEscape } from "../utils/escape"
 
 export function RenameDialog(props: {
   readonly session: Session
@@ -10,6 +11,8 @@ export function RenameDialog(props: {
   const [value, setValue] = createSignal(props.currentTitle ?? props.session.cwd)
   const [busy, setBusy] = createSignal(false)
   const [error, setError] = createSignal<string | undefined>(undefined)
+
+  useEscape(props.onClose)
 
   async function save(): Promise<void> {
     if (busy()) return
@@ -25,18 +28,8 @@ export function RenameDialog(props: {
   }
 
   return (
-    <div
-      class="modal-overlay"
-      onClick={props.onClose}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") props.onClose()
-      }}
-    >
-      <div
-        class="modal"
-        onClick={(event) => event.stopPropagation()}
-        onKeyDown={(event) => event.stopPropagation()}
-      >
+    <div class="modal-overlay" onClick={props.onClose}>
+      <div class="modal" onClick={(e) => e.stopPropagation()}>
         <div class="modal-header">
           <span class="modal-title">Rename session</span>
           <button type="button" class="icon-btn" onClick={props.onClose}>
@@ -74,6 +67,8 @@ export function GoalDialog(props: { readonly sessionId: string; readonly onClose
   )
   const [busy, setBusy] = createSignal(false)
   const [error, setError] = createSignal<string | undefined>(undefined)
+
+  useEscape(props.onClose)
 
   async function refresh(): Promise<void> {
     try {
@@ -120,18 +115,8 @@ export function GoalDialog(props: { readonly sessionId: string; readonly onClose
   }
 
   return (
-    <div
-      class="modal-overlay"
-      onClick={props.onClose}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") props.onClose()
-      }}
-    >
-      <div
-        class="modal"
-        onClick={(event) => event.stopPropagation()}
-        onKeyDown={(event) => event.stopPropagation()}
-      >
+    <div class="modal-overlay" onClick={props.onClose}>
+      <div class="modal" onClick={(e) => e.stopPropagation()}>
         <div class="modal-header">
           <span class="modal-title">Goal</span>
           <button type="button" class="icon-btn" onClick={props.onClose}>
@@ -192,24 +177,16 @@ export function StatusDialog(props: { readonly sessionId: string; readonly onClo
     { messageCount: number; totalChars: number; estimatedTokens: number } | undefined
   >(undefined)
 
+  useEscape(props.onClose)
+
   void api
     .getContext(props.sessionId)
     .then(setContext)
     .catch(() => {})
 
   return (
-    <div
-      class="modal-overlay"
-      onClick={props.onClose}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") props.onClose()
-      }}
-    >
-      <div
-        class="modal"
-        onClick={(event) => event.stopPropagation()}
-        onKeyDown={(event) => event.stopPropagation()}
-      >
+    <div class="modal-overlay" onClick={props.onClose}>
+      <div class="modal" onClick={(e) => e.stopPropagation()}>
         <div class="modal-header">
           <span class="modal-title">Status</span>
           <button type="button" class="icon-btn" onClick={props.onClose}>

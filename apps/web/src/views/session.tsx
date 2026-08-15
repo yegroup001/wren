@@ -110,7 +110,6 @@ export function SessionView(props: { readonly store: WebStore; readonly sessionI
     if (el !== undefined && stickToBottom()) el.scrollTop = el.scrollHeight
   })
 
-  onCleanup(() => {})
 
   const busy = () => status().type !== "idle"
   const title = () => props.store.state.titles[sid]

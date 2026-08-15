@@ -162,7 +162,8 @@ export function createWebStore(): WebStore {
       const token = getToken()
       let socket: WebSocket
       try {
-        socket = new WebSocket(`ws://${location.host}/ws?token=${encodeURIComponent(token)}`)
+        const proto = location.protocol === "https:" ? "wss:" : "ws:"
+        socket = new WebSocket(`${proto}//${location.host}/ws?token=${encodeURIComponent(token)}`)
       } catch {
         scheduleReconnect()
         return
