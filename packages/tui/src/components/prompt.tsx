@@ -58,11 +58,20 @@ export function Prompt(props: {
   const [pasteSummary, setPasteSummary] = createSignal<string | undefined>()
   const [configuredEffort, setConfiguredEffort] = createSignal<string | undefined>()
   const [pendingEditMessageId, setPendingEditMessageId] = createSignal<string | undefined>()
+  const [submitting, setSubmitting] = createSignal(false)
   let textareaRef: TextareaRenderable | undefined
   let interruptTimer: ReturnType<typeof setTimeout> | undefined
+  let abortSent = false
 
   onCleanup(() => {
     if (interruptTimer !== undefined) clearTimeout(interruptTimer)
+  })
+
+  createEffect(() => {
+    if (!isWorking()) {
+      abortSent = false
+      if (interruptCount() > 0) setInterruptCount(0)
+    }
   })
 
   createEffect(() => {
@@ -289,9 +298,11 @@ export function Prompt(props: {
     if (!isWorking()) {
       return
     }
+    if (abortSent) return
     const count = interruptCount() + 1
     setInterruptCount(count)
     if (count >= 2) {
+      abortSent = true
       setInterruptCount(0)
       if (interruptTimer !== undefined) {
         clearTimeout(interruptTimer)
@@ -302,6 +313,7 @@ export function Prompt(props: {
           method: "POST",
         }),
       )
+      toast.show({ title: "Abort", message: "Sending interrupt...", variant: "info" })
     } else {
       if (interruptTimer !== undefined) clearTimeout(interruptTimer)
       interruptTimer = setTimeout(() => {
@@ -414,12 +426,14 @@ export function Prompt(props: {
 
   async function handleSubmit(allowAutocomplete = false): Promise<void> {
     if (autocompleteVisible() && !allowAutocomplete) return
+    if (submitting()) return
     const text = input() || (textareaRef?.plainText ?? "")
     if (text.trim() === "") return
     if (props.inputDisabled && !text.trim().startsWith("/")) return
     const trimmed = text.trim()
     const editId = pendingEditMessageId()
 
+    setSubmitting(true)
     textareaRef?.clear()
     setInput("")
     setAutocompleteVisible(false)
@@ -531,6 +545,8 @@ export function Prompt(props: {
       textareaRef?.setText(trimmed)
       setInput(trimmed)
       if (editId !== undefined) setPendingEditMessageId(editId)
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -969,7 +985,9 @@ export function Prompt(props: {
           placeholder={
             props.inputDisabled
               ? ""
-              : "Ask Wren anything... (Enter to send, Shift+Enter for newline)"
+              : submitting()
+                ? "Sending..."
+                : "Ask Wren anything... (Enter to send, Shift+Enter for newline)"
           }
           onContentChange={() => {
             if (textareaRef) {
