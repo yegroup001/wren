@@ -10,14 +10,15 @@ import {
 } from "./index"
 
 describe("Todo 5: model registry parser with diagnostics", () => {
-  test("built-in entries have 7 models", () => {
-    expect(BUILT_IN_MODEL_ENTRIES).toHaveLength(7)
+  test("built-in entries have 4 models", () => {
+    expect(BUILT_IN_MODEL_ENTRIES).toHaveLength(4)
   })
 
-  test("built-in entries include nested-slash-safe modelIds", () => {
+  test("built-in entries are provider-neutral (no anthropic builtins) and include glm ids", () => {
     const ids = BUILT_IN_MODEL_ENTRIES.map((e) => e.ref.modelId)
     expect(ids).toContain("glm-5.2")
-    expect(ids).toContain("claude-sonnet-4-5")
+    expect(ids).toContain("gpt-4o")
+    expect(BUILT_IN_MODEL_ENTRIES.every((e) => e.ref.providerId !== "anthropic")).toBe(true)
   })
 
   test("returns built-in catalog with info diagnostic when no config exists", () => {
@@ -25,7 +26,7 @@ describe("Todo 5: model registry parser with diagnostics", () => {
       skipGlobalConfig: true,
     })
     expect(result.source).toBe("built-in")
-    expect(result.entries).toHaveLength(7)
+    expect(result.entries).toHaveLength(4)
     expect(
       result.diagnostics.some((d) => d.level === "info" && d.message.includes("No config")),
     ).toBe(true)
@@ -68,7 +69,6 @@ describe("model registry thinking metadata", () => {
       join(root, "config.json"),
       JSON.stringify({
         defaultModel: { source: "llm", model: "glm-5.2" },
-        smallFastModel: { source: "llm", model: "glm-5.2" },
         sources: {
           llm: {
             type: "openai-compatible-chat",
@@ -105,7 +105,6 @@ describe("model registry thinking metadata", () => {
       join(root, "config.json"),
       JSON.stringify({
         defaultModel: { source: "openai", model: "gpt-4o" },
-        smallFastModel: { source: "openai", model: "gpt-4o" },
         sources: {
           openai: {
             type: "openai-official",
@@ -137,7 +136,6 @@ describe("model registry thinking metadata", () => {
       join(root, "config.json"),
       JSON.stringify({
         defaultModel: { source: "gemini", model: "gemini-pro" },
-        smallFastModel: { source: "gemini", model: "gemini-pro" },
         sources: {
           gemini: {
             type: "gemini",
@@ -171,7 +169,6 @@ describe("model registry thinking metadata", () => {
       join(root, "config.json"),
       JSON.stringify({
         defaultModel: { source: "anthropic", model: "claude-sonnet" },
-        smallFastModel: { source: "anthropic", model: "claude-sonnet" },
         sources: {
           anthropic: {
             type: "anthropic",
@@ -207,7 +204,6 @@ describe("model registry thinking metadata", () => {
       join(root, "config.json"),
       JSON.stringify({
         defaultModel: { source: "ds", model: "deepseek-r1" },
-        smallFastModel: { source: "ds", model: "deepseek-r1" },
         sources: {
           ds: {
             type: "openai-compatible-chat",
@@ -242,7 +238,6 @@ describe("model registry thinking metadata", () => {
       join(root, "config.json"),
       JSON.stringify({
         defaultModel: { source: "openai", model: "gpt-4o" },
-        smallFastModel: { source: "openai", model: "gpt-4o" },
         sources: {
           openai: {
             type: "openai-official",

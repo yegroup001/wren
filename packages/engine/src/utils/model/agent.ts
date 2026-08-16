@@ -1,3 +1,9 @@
+// Per-agentType model resolution for AgentTool subagents.
+//
+// config.agentModels maps an agent type string to an explicit
+// { source, model, effort? } reference. Unspecified agent types use
+// defaultModel (the main loop model).
+
 import type { PermissionMode } from '../permissions/PermissionMode.js'
 import { capitalize } from '../stringUtils.js'
 import { MODEL_ALIASES, type ModelAlias } from './aliases.js'
@@ -25,7 +31,7 @@ export function getDefaultSubagentModel(): string {
 /**
  * Resolve the effort level for a subagent. Priority:
  * 1. Agent definition's effort field
- * 2. The configured agent role's effort
+ * 2. The configured agentModels reference's effort
  * 3. The resolved model's configured effort
  * 4. undefined (let the model decide)
  */
@@ -38,24 +44,7 @@ export function getAgentEffort(
 
   if (agentType !== undefined) {
     const configured = config.agentModels?.[agentType]
-    if (typeof configured === "string") {
-      const role = config.roles?.[configured as keyof typeof config.roles]
-      if (role?.effort !== undefined) return role.effort
-    } else if (configured?.effort !== undefined) {
-      return configured.effort
-    }
-  }
-
-  if (agentModel !== undefined) {
-    const role = config.roles?.[agentModel as keyof typeof config.roles]
-    if (role?.effort !== undefined) return role.effort
-  }
-
-  if (agentType !== undefined) {
-    const configured = config.agentModels?.[agentType]
-    if (configured !== undefined && typeof configured !== "string") {
-      return configured.effort ?? getModelEffort(formatModelReference(configured))
-    }
+    if (configured?.effort !== undefined) return configured.effort
   }
 
   const modelToCheck = resolvedModel ?? agentModel
@@ -79,9 +68,6 @@ function resolveSelection(config: ReturnType<typeof getConfig>, spec: string): s
       mainLoopModel: formatModelReference(config.defaultModel),
       exceeds200kTokens: false,
     })
-  }
-  if (config.roles?.[spec as keyof typeof config.roles] !== undefined) {
-    return formatModelReference(config.roles[spec as keyof typeof config.roles]!)
   }
   try {
     return formatModelReference(resolveModelReference(config, spec))
@@ -116,9 +102,7 @@ export function getAgentModel(
   if (agentType !== undefined) {
     const configured = config.agentModels?.[agentType]
     if (configured !== undefined) {
-      return typeof configured === "string"
-        ? resolve(configured)
-        : formatModelReference(configured)
+      return formatModelReference(configured)
     }
   }
   return resolve("inherit")
@@ -143,10 +127,10 @@ export function getAgentModelOptions(): AgentModelOption[] {
       description: 'Use the same model as the main conversation',
     },
   ]
-  for (const [role, reference] of Object.entries(config.roles ?? {})) {
+  for (const [agentType, reference] of Object.entries(config.agentModels ?? {})) {
     options.push({
-      value: role as AgentModelAlias,
-      label: capitalize(role),
+      value: agentType as AgentModelAlias,
+      label: capitalize(agentType),
       description: formatModelReference(reference),
     })
   }

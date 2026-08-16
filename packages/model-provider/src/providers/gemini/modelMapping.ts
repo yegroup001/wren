@@ -1,16 +1,26 @@
-function getModelFamily(model: string): "haiku" | "sonnet" | "opus" | null {
-  if (/haiku/i.test(model)) return "haiku"
-  if (/opus/i.test(model)) return "opus"
-  if (/sonnet/i.test(model)) return "sonnet"
-  return null
-}
+import { getModelFamily, strip1mSuffix } from "../shared/modelFamily.js"
 
-export function resolveGeminiModel(anthropicModel: string): string {
+/**
+ * Resolve the Gemini model name for a given (provider-neutral) model name.
+ *
+ * The name is used literally. Tier-scoped env overrides act ONLY when the
+ * name itself carries an Anthropic tier word (haiku|sonnet|opus) — a
+ * backward-compatibility shim for Anthropic-named inputs, not a general tier
+ * inference.
+ *
+ * Priority:
+ * 1. GEMINI_MODEL env var (override everything)
+ * 2. GEMINI_DEFAULT_{TIER}_MODEL env var (only on tier-named inputs)
+ * 3. Pass through the original name — requires one of the above when the
+ *    input is tier-named, else the configured Gemini model ID must be given
+ *    through the Wren config's `sources.<name>` block or GEMINI_MODEL.
+ */
+export function resolveGeminiModel(modelName: string): string {
   if (process.env["GEMINI_MODEL"]) {
     return process.env["GEMINI_MODEL"]
   }
 
-  const cleanModel = anthropicModel.replace(/\[1m\]$/i, "")
+  const cleanModel = strip1mSuffix(modelName)
   const family = getModelFamily(cleanModel)
 
   if (!family) {
@@ -23,13 +33,7 @@ export function resolveGeminiModel(anthropicModel: string): string {
     return geminiModel
   }
 
-  const sharedEnvVar = `ANTHROPIC_DEFAULT_${family.toUpperCase()}_MODEL`
-  const resolvedModel = process.env[sharedEnvVar]
-  if (resolvedModel) {
-    return resolvedModel
-  }
-
   throw new Error(
-    `Gemini provider requires GEMINI_MODEL or ${geminiEnvVar} (or ${sharedEnvVar} for backward compatibility) to be configured.`,
+    `Gemini provider requires GEMINI_MODEL or ${geminiEnvVar} to be configured.`,
   )
 }

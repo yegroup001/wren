@@ -10,7 +10,8 @@ import type {
 import { queryModelWithStreaming } from "src/services/api/claude.js"
 import { getLocalFeatureValue } from "src/utils/featureGates.js"
 import { createUserMessage } from "src/utils/messages.js"
-import { getMainLoopModel, getSmallFastModel } from "src/utils/model/model.js"
+import { getMainLoopModel } from "src/utils/model/model.js"
+import { getTaskModel } from "src/utils/model/tasks.js"
 import { jsonParse } from "src/utils/slowOperations.js"
 import { asSystemPrompt } from "src/utils/systemPromptType.js"
 import type { SearchOptions, SearchResult, WebSearchAdapter } from "./types.js"
@@ -38,7 +39,7 @@ export class ApiSearchAdapter implements WebSearchAdapter {
     const toolSchema = makeToolSchema({ allowedDomains, blockedDomains })
 
     const useHaiku = getLocalFeatureValue("wren_plum_vx3", false)
-    const model = useHaiku ? getSmallFastModel() : getMainLoopModel()
+    const model = useHaiku ? getTaskModel("websearch") : getMainLoopModel()
 
     const queryStream = queryModelWithStreaming({
       messages: [userMessage],

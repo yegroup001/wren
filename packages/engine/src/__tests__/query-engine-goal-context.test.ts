@@ -80,7 +80,6 @@ beforeEach(async () => {
   setSessionPersistenceDisabled(true)
   setConfigForTests({
     defaultModel: { source: "test", model: "claude-sonnet-4-5-20250929" },
-    smallFastModel: { source: "test", model: "claude-sonnet-4-5-20250929" },
     sources: {
       test: {
         type: "openai-compatible-chat",

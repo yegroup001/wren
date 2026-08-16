@@ -26,18 +26,11 @@ describe("resolveGeminiModel", () => {
     Object.assign(process.env, originalEnv)
   })
 
-  test("GEMINI_MODEL env var overrides family mappings", () => {
+  test("GEMINI_MODEL env var overrides everything", () => {
     process.env.GEMINI_MODEL = "gemini-2.5-pro"
-    process.env.ANTHROPIC_DEFAULT_SONNET_MODEL = "gemini-2.5-flash"
+    process.env.GEMINI_DEFAULT_SONNET_MODEL = "gemini-2.5-flash"
 
     expect(resolveGeminiModel("claude-sonnet-4-6")).toBe("gemini-2.5-pro")
-  })
-
-  test("GEMINI_DEFAULT_*_MODEL takes precedence over ANTHROPIC_DEFAULT_*", () => {
-    process.env.GEMINI_DEFAULT_SONNET_MODEL = "gemini-2.5-flash-priority"
-    process.env.ANTHROPIC_DEFAULT_SONNET_MODEL = "gemini-2.5-flash-fallback"
-
-    expect(resolveGeminiModel("claude-sonnet-4-6")).toBe("gemini-2.5-flash-priority")
   })
 
   test("resolves sonnet model from GEMINI_DEFAULT_SONNET_MODEL", () => {
@@ -55,24 +48,13 @@ describe("resolveGeminiModel", () => {
     expect(resolveGeminiModel("claude-opus-4-6")).toBe("gemini-2.5-pro")
   })
 
-  test("falls back to ANTHROPIC_DEFAULT_* when GEMINI_DEFAULT_* not set", () => {
+  test("ANTHROPIC_DEFAULT_* env vars are ignored (cross-provider fallback removed)", () => {
     process.env.ANTHROPIC_DEFAULT_SONNET_MODEL = "gemini-2.5-flash"
-    expect(resolveGeminiModel("claude-sonnet-4-6")).toBe("gemini-2.5-flash")
-  })
-
-  test("resolves haiku from ANTHROPIC_DEFAULT_HAIKU_MODEL as fallback", () => {
     process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL = "gemini-2.5-flash-lite"
-    expect(resolveGeminiModel("claude-haiku-4-5-20251001")).toBe("gemini-2.5-flash-lite")
-  })
-
-  test("resolves opus from ANTHROPIC_DEFAULT_OPUS_MODEL as fallback", () => {
     process.env.ANTHROPIC_DEFAULT_OPUS_MODEL = "gemini-2.5-pro"
-    expect(resolveGeminiModel("claude-opus-4-6")).toBe("gemini-2.5-pro")
-  })
-
-  test("uses backward compatible family override", () => {
-    process.env.ANTHROPIC_DEFAULT_SONNET_MODEL = "legacy-gemini-sonnet"
-    expect(resolveGeminiModel("claude-sonnet-4-6")).toBe("legacy-gemini-sonnet")
+    expect(() => resolveGeminiModel("claude-sonnet-4-6")).toThrow()
+    expect(() => resolveGeminiModel("claude-haiku-4-5-20251001")).toThrow()
+    expect(() => resolveGeminiModel("claude-opus-4-6")).toThrow()
   })
 
   test("strips [1m] suffix before resolving", () => {
@@ -80,7 +62,7 @@ describe("resolveGeminiModel", () => {
     expect(resolveGeminiModel("claude-sonnet-4-6[1m]")).toBe("gemini-2.5-flash")
   })
 
-  test("passes through explicit Gemini model names", () => {
+  test("passes through explicit (non-tier) model names", () => {
     expect(resolveGeminiModel("gemini-3.1-flash-lite-preview")).toBe(
       "gemini-3.1-flash-lite-preview",
     )
@@ -88,7 +70,7 @@ describe("resolveGeminiModel", () => {
 
   test("throws when no Gemini model configuration is available", () => {
     expect(() => resolveGeminiModel("claude-sonnet-4-6")).toThrow(
-      "Gemini provider requires GEMINI_MODEL or GEMINI_DEFAULT_SONNET_MODEL (or ANTHROPIC_DEFAULT_SONNET_MODEL for backward compatibility) to be configured.",
+      "Gemini provider requires GEMINI_MODEL or GEMINI_DEFAULT_SONNET_MODEL to be configured.",
     )
   })
 })

@@ -49,7 +49,6 @@ function restoreEnv(): void {
 
 const config: WrenConfig = {
   defaultModel: { source: "llmapi-ext", model: "glm-5.2" },
-  smallFastModel: { source: "llmapi-ext", model: "glm-5.2" },
   sources: {
     "llmapi-ext": {
       type: "openai-compatible-chat",

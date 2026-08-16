@@ -23,7 +23,6 @@ beforeEach(async () => {
   setProjectRoot(tempDir)
   setConfigForTests({
     defaultModel: { source: "test", model: "claude-sonnet-4-5-20250929" },
-    smallFastModel: { source: "test", model: "claude-sonnet-4-5-20250929" },
     sources: {
       test: {
         type: "openai-compatible-chat",

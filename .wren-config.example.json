@@ -1,67 +1,39 @@
 {
   "defaultModel": {
-    "source": "my-openai",
-    "model": "gpt-4o"
+    "source": "zhipu",
+    "model": "glm-5.2"
   },
-  "smallFastModel": {
-    "source": "my-openai",
-    "model": "gpt-4o-mini"
+  "agentModels": {
+    "general-purpose": { "source": "zhipu", "model": "glm-5.2" },
+    "explore": { "source": "zhipu", "model": "glm-5.2-fast" },
+    "verification": { "source": "zhipu", "model": "glm-5.2", "effort": "high" }
   },
-  "roles": {
-    "fast": {
-      "source": "my-openai",
-      "model": "gpt-4o-mini"
-    },
-    "standard": {
-      "source": "my-openai",
-      "model": "gpt-4o"
-    },
-    "reasoning": {
-      "source": "my-anthropic",
-      "model": "claude-sonnet-4-5"
-    }
+  "taskModels": {
+    "memory": { "source": "zhipu", "model": "glm-5.2" },
+    "classifier": { "source": "zhipu", "model": "glm-5.2-fast" },
+    "compact": { "source": "zhipu", "model": "glm-5.2-fast" },
+    "title": { "source": "zhipu", "model": "glm-5.2-fast" },
+    "websearch": { "source": "zhipu", "model": "glm-5.2-fast" },
+    "permission-explainer": { "source": "zhipu", "model": "glm-5.2-fast" },
+    "attachment-summary": { "source": "zhipu", "model": "glm-5.2-fast" },
+    "hook": { "source": "zhipu", "model": "glm-5.2-fast" }
   },
   "sources": {
-    "my-openai": {
+    "zhipu": {
       "type": "openai-compatible-chat",
-      "baseUrl": "https://api.openai.com/v1",
-      "apiKey": "$OPENAI_API_KEY",
+      "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
+      "apiKey": "$ZHIPU_API_KEY",
       "models": {
-        "gpt-4o": {
-          "contextWindow": 128000,
-          "maxOutputTokens": 16384,
-          "displayName": "GPT-4o",
-          "supportsThinking": false
-        },
-        "gpt-4o-mini": {
-          "contextWindow": 128000,
-          "maxOutputTokens": 16384,
-          "displayName": "GPT-4o mini",
-          "supportsThinking": false
-        }
-      }
-    },
-    "my-anthropic": {
-      "type": "anthropic",
-      "apiKey": "$ANTHROPIC_API_KEY",
-      "models": {
-        "claude-sonnet-4-5": {
-          "contextWindow": 200000,
-          "displayName": "Claude Sonnet 4.5",
-          "supportsThinking": true,
-          "reasoningMode": "adaptive"
-        }
-      }
-    },
-    "my-gemini": {
-      "type": "gemini",
-      "apiKey": "$GEMINI_API_KEY",
-      "models": {
-        "gemini-2.5-pro": {
+        "glm-5.2": {
           "contextWindow": 1048576,
-          "displayName": "Gemini 2.5 Pro",
+          "displayName": "GLM 5.2",
           "supportsThinking": true,
-          "thinkingBudget": 24576
+          "efforts": ["low", "medium", "high", "xhigh", "max"]
+        },
+        "glm-5.2-fast": {
+          "contextWindow": 128000,
+          "displayName": "GLM 5.2 Fast",
+          "supportsThinking": false
         }
       }
     }

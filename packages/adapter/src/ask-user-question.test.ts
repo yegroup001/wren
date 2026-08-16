@@ -14,7 +14,6 @@ import type { TuiStoreApi } from "./store"
 beforeAll(() => {
   setConfigForTests({
     defaultModel: { source: "default", model: "gpt-5.5" },
-    smallFastModel: { source: "default", model: "gpt-5.5" },
     sources: {
       default: {
         type: "openai-compatible-chat",

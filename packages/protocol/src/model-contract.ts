@@ -100,6 +100,27 @@ export const REASONING_MODES = ["adaptive", "budget"] as const
 export type ReasoningMode = (typeof REASONING_MODES)[number]
 export const ReasoningModeSchema = z.enum(REASONING_MODES)
 
+// ---------------------------------------------------------------------------
+// TaskModelKey — classification of internal/subagent side-query API calls
+// ---------------------------------------------------------------------------
+// taskModels classifies the internal side queries the engine itself issues
+// (memory scans, permission classifiers, compacting, title generation, web
+// search, attachment summaries, hook workers) onto explicit model references.
+// Unspecified task classes use defaultModel.
+
+export const TASK_MODEL_KEYS = [
+  "memory",
+  "classifier",
+  "compact",
+  "title",
+  "websearch",
+  "permission-explainer",
+  "attachment-summary",
+  "hook",
+] as const
+export type TaskModelKey = (typeof TASK_MODEL_KEYS)[number]
+export const TaskModelKeySchema = z.enum(TASK_MODEL_KEYS)
+
 export type ProviderKindReasoningCapability = {
   readonly mechanism: ReasoningMechanism
   readonly effortLevels: readonly EffortLevel[]

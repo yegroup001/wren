@@ -53,6 +53,14 @@ describe("resolveGrokModel", () => {
     expect(resolveGrokModel("claude-opus-4-6")).toBe("grok-2-latest")
   })
 
+  test("ANTHROPIC_DEFAULT_* env vars are ignored (cross-provider fallback removed)", () => {
+    process.env.ANTHROPIC_DEFAULT_SONNET_MODEL = "should-be-ignored"
+    process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL = "should-be-ignored"
+    process.env.ANTHROPIC_DEFAULT_OPUS_MODEL = "should-be-ignored"
+    expect(resolveGrokModel("claude-opus-99-20300101")).toBe("grok-4.20-reasoning")
+    expect(resolveGrokModel("claude-sonnet-4-5-20250929")).toBe("grok-3-mini-fast")
+  })
+
   test("passes through unknown model names", () => {
     expect(resolveGrokModel("some-unknown-model")).toBe("some-unknown-model")
   })

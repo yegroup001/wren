@@ -31,19 +31,13 @@ describe("resolveOpenAIModel", () => {
     expect(resolveOpenAIModel("claude-sonnet-4-6")).toBe("my-custom-model")
   })
 
-  test("ANTHROPIC_DEFAULT_SONNET_MODEL overrides default map", () => {
-    process.env.ANTHROPIC_DEFAULT_SONNET_MODEL = "my-sonnet"
-    expect(resolveOpenAIModel("claude-sonnet-4-6")).toBe("my-sonnet")
-  })
-
-  test("ANTHROPIC_DEFAULT_HAIKU_MODEL overrides default map", () => {
-    process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL = "my-haiku"
-    expect(resolveOpenAIModel("claude-haiku-4-5-20251001")).toBe("my-haiku")
-  })
-
-  test("ANTHROPIC_DEFAULT_OPUS_MODEL overrides default map", () => {
-    process.env.ANTHROPIC_DEFAULT_OPUS_MODEL = "my-opus"
-    expect(resolveOpenAIModel("claude-opus-4-6")).toBe("my-opus")
+  test("ANTHROPIC_DEFAULT_* env vars are ignored (cross-provider fallback removed)", () => {
+    process.env.ANTHROPIC_DEFAULT_SONNET_MODEL = "should-be-ignored"
+    process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL = "should-be-ignored"
+    process.env.ANTHROPIC_DEFAULT_OPUS_MODEL = "should-be-ignored"
+    expect(resolveOpenAIModel("claude-sonnet-4-6")).toBe("gpt-4o")
+    expect(resolveOpenAIModel("claude-haiku-4-5-20251001")).toBe("gpt-4o-mini")
+    expect(resolveOpenAIModel("claude-opus-4-6")).toBe("o3")
   })
 
   test("maps known Anthropic model via DEFAULT_MODEL_MAP", () => {

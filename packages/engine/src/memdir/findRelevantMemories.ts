@@ -1,6 +1,6 @@
 import { logForDebugging } from "../utils/debug.js"
 import { errorMessage } from "../utils/errors.js"
-import { getDefaultSonnetModel } from "../utils/model/model.js"
+import { getTaskModel } from "../utils/model/tasks.js"
 import { sideQuery } from "../utils/sideQuery.js"
 import { jsonParse } from "../utils/slowOperations.js"
 import { formatMemoryManifest, type MemoryHeader, scanMemoryFiles } from "./memoryScan.js"
@@ -74,7 +74,7 @@ async function selectRelevantMemories(
 
   try {
     const result = await sideQuery({
-      model: getDefaultSonnetModel(),
+      model: getTaskModel("memory"),
       system: SELECT_MEMORIES_SYSTEM_PROMPT,
       skipSystemPromptPrefix: true,
       messages: [

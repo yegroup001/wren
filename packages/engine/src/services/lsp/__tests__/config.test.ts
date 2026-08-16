@@ -4,7 +4,6 @@ import { getAllLspServers } from "../config.js"
 
 const minimalConfig = {
   defaultModel: { source: "test", model: "m" },
-  smallFastModel: { source: "test", model: "m" },
   sources: { test: { type: "openai-compatible-chat", baseUrl: "https://example.invalid/v1", apiKey: "k", models: {} } },
 } as const
 

@@ -23,10 +23,6 @@ const savedEnv: Record<string, string | undefined> = {}
 
 const testConfig: WrenConfig = {
   defaultModel: { source: "anthropic", model: "claude-opus-4-7" },
-  smallFastModel: { source: "anthropic", model: "claude-haiku-4-5" },
-  roles: {
-    reasoning: { source: "anthropic", model: "claude-opus-4-7" },
-    standard: { source: "anthropic", model: "claude-sonnet-4-6" },
     fast: { source: "anthropic", model: "claude-haiku-4-5" },
   },
   sources: {

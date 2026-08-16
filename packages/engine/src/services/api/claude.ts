@@ -82,6 +82,8 @@ import {
   getSmallFastModel,
   isNonCustomOpusModel,
 } from "../../utils/model/model.js"
+import { getTaskModel } from "../../utils/model/tasks.js"
+import type { TaskModelKey } from "@wren/protocol"
 import { asSystemPrompt, type SystemPrompt } from "../../utils/systemPromptType.js"
 import { tokenCountFromLastAPIResponse } from "../../utils/tokens.js"
 import { getAPIContextManagement } from "../compact/apiMicrocompact.js"
@@ -2673,12 +2675,17 @@ export async function queryHaiku({
   outputFormat,
   signal,
   options,
+  taskModelKey,
 }: {
   systemPrompt: SystemPrompt
   userPrompt: string
   outputFormat?: BetaJSONOutputFormat
   signal: AbortSignal
   options: HaikuOptions
+  /** Optional task-class override (config.taskModels) for this side query;
+   *  when set, resolves through the taskModels classification instead of the
+   *  plain fast tier. */
+  taskModelKey?: TaskModelKey
 }): Promise<AssistantMessage> {
   const result = await withVCR(
     [
@@ -2704,7 +2711,7 @@ export async function queryHaiku({
         signal,
         options: {
           ...options,
-          model: getSmallFastModel(),
+          model: taskModelKey !== undefined ? getTaskModel(taskModelKey) : getSmallFastModel(),
           enablePromptCaching: options.enablePromptCaching ?? false,
           outputFormat,
           async getToolPermissionContext() {

@@ -8,6 +8,8 @@ import {
   ProviderKindSchema,
   ReasoningModeSchema,
   SelectedModelReferenceSchema,
+  TASK_MODEL_KEYS,
+  type TaskModelKey,
 } from "@wren/protocol"
 import { z } from "zod"
 import { getWrenConfigHome } from "./config-home"
@@ -69,13 +71,9 @@ export const WrenSourceSchema = WrenProviderSchema.extend({
 
 export type WrenSource = z.infer<typeof WrenSourceSchema>
 
-export const ModelRoleSchema = z.enum(["fast", "standard", "reasoning", "inherit"])
-export type ModelRole = z.infer<typeof ModelRoleSchema>
-
 export const WrenConfigSchema = z
   .object({
     defaultModel: SelectedModelReferenceSchema,
-    smallFastModel: SelectedModelReferenceSchema,
     sources: z.record(z.string().min(1), WrenSourceSchema),
     // Behavioral preferences previously read from the vendored engine's
     // legacy global config (~/.wren/.wren.json). Kept here so user-facing
@@ -83,11 +81,17 @@ export const WrenConfigSchema = z
     theme: z.enum(["auto", "dark", "light"]).optional(),
     autoCompact: z.boolean().optional(),
     preferredLanguage: z.enum(["auto", "en", "zh"]).optional(),
-    roles: z
-      .record(z.enum(["fast", "standard", "reasoning"]), SelectedModelReferenceSchema)
-      .optional(),
+    // Per-agentType model override. Value is an explicit { source, model, effort? }
+    // reference; omitting an agentType uses defaultModel.
     agentModels: z
-      .record(z.string().min(1), z.union([ModelRoleSchema, SelectedModelReferenceSchema]))
+      .record(z.string().min(1), SelectedModelReferenceSchema)
+      .optional(),
+    // Per-task model override for the engine's internal side-query API calls
+    // (memory scans, permission classifiers, compacting, title generation, web
+    // search, attachment summaries, hook workers). Value is an explicit
+    // { source, model, effort? } reference; omitting a task uses defaultModel.
+    taskModels: z
+      .record(z.string().min(1), SelectedModelReferenceSchema)
       .optional(),
     // LSP servers: `false` disables all LSP (including plugin-provided
     // servers); an object adds user-defined servers keyed by name; `true`
@@ -415,22 +419,19 @@ export const WrenConfigSchema = z
     }
 
     validateReference(config.defaultModel, ["defaultModel"])
-    validateReference(config.smallFastModel, ["smallFastModel"])
-    for (const [role, reference] of Object.entries(config.roles ?? {})) {
-      validateReference(reference, ["roles", role])
+    for (const [agentType, reference] of Object.entries(config.agentModels ?? {})) {
+      validateReference(reference, ["agentModels", agentType])
     }
-    for (const [agentType, selection] of Object.entries(config.agentModels ?? {})) {
-      if (typeof selection !== "string") {
-        validateReference(selection, ["agentModels", agentType])
-        continue
-      }
-      if (selection !== "inherit" && config.roles?.[selection] === undefined) {
+    for (const [taskKey, reference] of Object.entries(config.taskModels ?? {})) {
+      if (!TASK_MODEL_KEYS.includes(taskKey as TaskModelKey)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ["agentModels", agentType],
-          message: `role "${selection}" is not configured`,
+          path: ["taskModels", taskKey],
+          message: `task key "${taskKey}" is not a recognized task class (${TASK_MODEL_KEYS.join(", ")})`,
         })
+        continue
       }
+      validateReference(reference, ["taskModels", taskKey])
     }
   })
 
@@ -490,7 +491,7 @@ export async function loadWrenConfig(
   const migrationGuidance =
     legacyKeys.length === 0
       ? ""
-      : ` Legacy config format detected (${legacyKeys.join(", ")}). Move provider definitions and their models under sources.<source>.models, use { source, model } for defaultModel and smallFastModel, and remove aliases.`
+      : ` Legacy config format detected (${legacyKeys.join(", ")}). Move provider definitions and their models under sources.<source>.models, use { source, model } for defaultModel, agentModels, and taskModels.`
   return {
     success: false,
     error: `Config validation failed:${migrationGuidance} ${result.error.issues.map((i) => i.message).join(", ")}`,

@@ -28,7 +28,6 @@ import type { TuiStoreApi } from "./store"
 
 const TEST_CONFIG = {
   defaultModel: { source: "default", model: "gpt-5.5" },
-  smallFastModel: { source: "default", model: "gpt-5.5" },
   sources: {
     default: {
       type: "openai-compatible-chat" as const,
@@ -878,7 +877,6 @@ describe("local adapter — in-process fetch routes", () => {
       join(configHome, "config.json"),
       JSON.stringify({
         defaultModel: { source: "p", model: "effort-model" },
-        smallFastModel: { source: "p", model: "effort-model" },
         sources: {
           p: {
             type: "openai-compatible-chat",
@@ -926,7 +924,6 @@ describe("local adapter — in-process fetch routes", () => {
       join(configHome, "config.json"),
       JSON.stringify({
         defaultModel: { source: "p", model: "effort-model" },
-        smallFastModel: { source: "p", model: "effort-model" },
         sources: {
           p: {
             type: "openai-compatible-chat",
@@ -986,7 +983,6 @@ describe("local adapter — in-process fetch routes", () => {
       join(configHome, "config.json"),
       JSON.stringify({
         defaultModel: { source: "p", model: "effort-model" },
-        smallFastModel: { source: "p", model: "effort-model" },
         sources: {
           p: {
             type: "openai-compatible-chat",

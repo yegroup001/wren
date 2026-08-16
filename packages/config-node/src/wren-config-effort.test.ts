@@ -13,7 +13,6 @@ function _makeConfig(sourceName: string, models: Record<string, unknown>) {
   const firstModel = Object.keys(models)[0] ?? "test-model"
   return {
     defaultModel: { source: sourceName, model: firstModel },
-    smallFastModel: { source: sourceName, model: firstModel },
     sources: {
       [sourceName]: makeSource(
         models[firstModel]?.toString().includes("gemini")
@@ -47,7 +46,6 @@ function buildConfig(
             : "compat-src"
   return {
     defaultModel: { source: sourceName, model: modelId },
-    smallFastModel: { source: sourceName, model: modelId },
     sources: {
       [sourceName]: makeSource(providerType, { [modelId]: makeModel(overrides) }),
     },

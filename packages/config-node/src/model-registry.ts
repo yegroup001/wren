@@ -12,7 +12,9 @@ import { getWrenConfigHome } from "./config-home"
 import { type WrenConfig, WrenConfigSchema, type WrenModel } from "./wren-config"
 
 // ---------------------------------------------------------------------------
-// Built-in model catalog — the canonical fallback when no config file exists
+// Built-in model catalog — the canonical fallback when no config file exists.
+// Provider-neutral by design: Anthropic models are first-class via an explicit
+// `sources.<name>.type = "anthropic"` block in the user config, not builtins.
 // ---------------------------------------------------------------------------
 
 export const BUILT_IN_MODEL_ENTRIES: readonly ModelCatalogEntry[] = [
@@ -29,28 +31,6 @@ export const BUILT_IN_MODEL_ENTRIES: readonly ModelCatalogEntry[] = [
     },
     contextLimit: 128000,
     reasoningMechanism: "none",
-  },
-  {
-    ref: {
-      providerId: "anthropic",
-      modelId: "claude-sonnet-4-5",
-      displayName: "Claude Sonnet 4.5",
-    },
-    contextLimit: 200000,
-    reasoningMechanism: "reasoning-mode",
-    reasoningMode: "adaptive",
-  },
-  {
-    ref: { providerId: "anthropic", modelId: "claude-haiku-4-5", displayName: "Claude Haiku 4.5" },
-    contextLimit: 200000,
-    reasoningMechanism: "reasoning-mode",
-    reasoningMode: "adaptive",
-  },
-  {
-    ref: { providerId: "anthropic", modelId: "claude-opus-4-5", displayName: "Claude Opus 4.5" },
-    contextLimit: 200000,
-    reasoningMechanism: "reasoning-mode",
-    reasoningMode: "adaptive",
   },
   {
     ref: { providerId: "openai-compatible-chat", modelId: "glm-5.2", displayName: "GLM 5.2" },

@@ -1,6 +1,8 @@
+import { getModelFamily, strip1mSuffix } from "../shared/modelFamily.js"
+
 /**
- * Default mapping from Anthropic model names to OpenAI model names.
- * Used only when ANTHROPIC_DEFAULT_*_MODEL env vars are not set.
+ * Default mapping for Anthropic-named inputs to OpenAI model names.
+ * Used when no provider-specific env overrides are set.
  */
 const DEFAULT_MODEL_MAP: Record<string, string> = {
   "claude-sonnet-4-20250514": "gpt-4o",
@@ -16,39 +18,34 @@ const DEFAULT_MODEL_MAP: Record<string, string> = {
   "claude-3-5-sonnet-20241022": "gpt-4o",
 }
 
-function getModelFamily(model: string): "haiku" | "sonnet" | "opus" | null {
-  if (/haiku/i.test(model)) return "haiku"
-  if (/opus/i.test(model)) return "opus"
-  if (/sonnet/i.test(model)) return "sonnet"
-  return null
-}
-
 /**
- * Resolve the OpenAI model name for a given Anthropic model.
+ * Resolve the OpenAI model name for a given (provider-neutral) model name.
  *
  * Priority:
  * 1. OPENAI_MODEL env var (override all)
- * 2. OPENAI_DEFAULT_{FAMILY}_MODEL env var (e.g. OPENAI_DEFAULT_SONNET_MODEL)
- * 3. ANTHROPIC_DEFAULT_{FAMILY}_MODEL env var (backward compatibility)
- * 4. DEFAULT_MODEL_MAP lookup
- * 5. Pass through original model name
+ * 2. OPENAI_DEFAULT_{TIER}_MODEL env var (e.g. OPENAI_DEFAULT_SONNET_MODEL),
+ *    BUT ONLY when the input name literally contains an Anthropic tier word
+ *    (haiku|sonnet|opus) — a backward-compatibility shim for Anthropic-named
+ *    inputs, NOT a general tier inference.
+ * 3. DEFAULT_MODEL_MAP lookup (for known Anthropic IDs)
+ * 4. Pass through the original model name
+ *
+ * The `ANTHROPIC_DEFAULT_{TIER}_MODEL` cross-provider fallback has been
+ * removed deliberately; configure OpenAI through `OPENAI_*` env vars or the
+ * Wren config's `sources.<name>.type = "openai-official"` block.
  */
-export function resolveOpenAIModel(anthropicModel: string): string {
+export function resolveOpenAIModel(modelName: string): string {
   if (process.env["OPENAI_MODEL"]) {
     return process.env["OPENAI_MODEL"]
   }
 
-  const cleanModel = anthropicModel.replace(/\[1m\]$/, "")
+  const cleanModel = strip1mSuffix(modelName)
 
   const family = getModelFamily(cleanModel)
   if (family) {
     const openaiEnvVar = `OPENAI_DEFAULT_${family.toUpperCase()}_MODEL`
     const openaiOverride = process.env[openaiEnvVar]
     if (openaiOverride) return openaiOverride
-
-    const anthropicEnvVar = `ANTHROPIC_DEFAULT_${family.toUpperCase()}_MODEL`
-    const anthropicOverride = process.env[anthropicEnvVar]
-    if (anthropicOverride) return anthropicOverride
   }
 
   return DEFAULT_MODEL_MAP[cleanModel] ?? cleanModel

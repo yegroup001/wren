@@ -88,6 +88,7 @@ export async function generateSessionTitle(
 
   try {
     const result = await queryHaiku({
+      taskModelKey: "title",
       systemPrompt: asSystemPrompt([SESSION_TITLE_PROMPT]),
       userPrompt: trimmed,
       outputFormat: {

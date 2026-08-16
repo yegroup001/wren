@@ -10,7 +10,7 @@ import { errorMessage } from "../errors.js"
 import type { HookResult } from "../hooks.js"
 import { safeParseJSON } from "../json.js"
 import { createUserMessage, extractTextContent } from "../messages.js"
-import { getSmallFastModel } from "../model/model.js"
+import { getTaskModel } from "../model/tasks.js"
 import type { PromptHook } from "../settings/types.js"
 import { asSystemPrompt } from "../systemPromptType.js"
 import { addArgumentsToPrompt, hookResponseSchema } from "./hookHelpers.js"
@@ -71,7 +71,7 @@ Your response must be a JSON object matching one of the following schemas:
             const appState = toolUseContext.getAppState()
             return appState.toolPermissionContext
           },
-          model: hook.model ?? getSmallFastModel(),
+          model: hook.model ?? getTaskModel("hook"),
           toolChoice: undefined,
           isNonInteractiveSession: true,
           hasAppendSystemPrompt: false,

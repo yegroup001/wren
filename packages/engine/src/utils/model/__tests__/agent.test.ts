@@ -5,10 +5,6 @@ import { setConfigForTests } from "../configBridge"
 
 const config: WrenConfig = {
   defaultModel: { source: "primary", model: "main" },
-  smallFastModel: { source: "primary", model: "fast" },
-  roles: {
-    fast: { source: "primary", model: "fast", effort: "low" },
-    standard: { source: "secondary", model: "shared" },
     reasoning: { source: "secondary", model: "shared", effort: "high" },
   },
   agentModels: {

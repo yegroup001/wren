@@ -90,7 +90,6 @@ beforeEach(() => {
   process.env.ANTHROPIC_API_KEY = "test-key"
   setConfigForTests({
     defaultModel: { source: "default", model: "test-model" },
-    smallFastModel: { source: "default", model: "test-model" },
     sources: {
       default: {
         type: "openai-compatible-chat",

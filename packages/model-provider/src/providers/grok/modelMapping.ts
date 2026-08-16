@@ -1,5 +1,7 @@
+import { getModelFamily, strip1mSuffix } from "../shared/modelFamily.js"
+
 /**
- * Default mapping from Anthropic model names to Grok model names.
+ * Default mapping for Anthropic-named inputs to Grok model names.
  *
  * Users can override per-family via GROK_DEFAULT_{FAMILY}_MODEL env vars,
  * or override the entire mapping via GROK_MODEL_MAP env var (JSON string).
@@ -24,13 +26,6 @@ const DEFAULT_FAMILY_MAP: Record<string, string> = {
   haiku: "grok-3-mini-fast",
 }
 
-function getModelFamily(model: string): "haiku" | "sonnet" | "opus" | null {
-  if (/haiku/i.test(model)) return "haiku"
-  if (/opus/i.test(model)) return "opus"
-  if (/sonnet/i.test(model)) return "sonnet"
-  return null
-}
-
 function getUserModelMap(): Record<string, string> | null {
   const raw = process.env["GROK_MODEL_MAP"]
   if (!raw) return null
@@ -51,14 +46,24 @@ function getUserModelMap(): Record<string, string> | null {
 }
 
 /**
- * Resolve the Grok model name for a given Anthropic model.
+ * Resolve the Grok model name for a given (provider-neutral) model name.
+ *
+ * Tier-scoped env overrides (`GROK_DEFAULT_{TIER}_MODEL`) and the static
+ * family map apply ONLY when the input name literally carries an Anthropic
+ * tier word (haiku|sonnet|opus) — a backward-compatibility shim for
+ * Anthropic-named inputs, NOT a general tier inference. Non-Anthropic names
+ * pass through literally.
+ *
+ * The `ANTHROPIC_DEFAULT_{TIER}_MODEL` cross-provider fallback has been
+ * removed deliberately; configure Grok through `GROK_*` env vars or the
+ * Wren config's `sources.<name>.type = "grok"` block.
  */
-export function resolveGrokModel(anthropicModel: string): string {
+export function resolveGrokModel(modelName: string): string {
   if (process.env["GROK_MODEL"]) {
     return process.env["GROK_MODEL"]
   }
 
-  const cleanModel = anthropicModel.replace(/\[1m\]$/, "")
+  const cleanModel = strip1mSuffix(modelName)
   const family = getModelFamily(cleanModel)
 
   const userMap = getUserModelMap()
@@ -70,10 +75,6 @@ export function resolveGrokModel(anthropicModel: string): string {
     const grokEnvVar = `GROK_DEFAULT_${family.toUpperCase()}_MODEL`
     const grokOverride = process.env[grokEnvVar]
     if (grokOverride) return grokOverride
-
-    const anthropicEnvVar = `ANTHROPIC_DEFAULT_${family.toUpperCase()}_MODEL`
-    const anthropicOverride = process.env[anthropicEnvVar]
-    if (anthropicOverride) return anthropicOverride
   }
 
   if (DEFAULT_MODEL_MAP[cleanModel]) {

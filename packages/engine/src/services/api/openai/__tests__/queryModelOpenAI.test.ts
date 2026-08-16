@@ -10,7 +10,6 @@ import { queryModelOpenAI } from "../index.js"
 const MODEL = "test-source/test-model"
 const config: WrenConfig = {
   defaultModel: { source: "test-source", model: "test-model" },
-  smallFastModel: { source: "test-source", model: "test-model" },
   sources: {
     "test-source": {
       type: "openai-compatible-chat",

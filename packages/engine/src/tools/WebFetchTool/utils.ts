@@ -538,6 +538,7 @@ export async function applyPromptToMarkdown(
 
   const modelPrompt = makeSecondaryModelPrompt(truncatedContent, prompt, isPreapprovedDomain)
   const assistantMessage = await queryHaiku({
+    taskModelKey: "attachment-summary",
     systemPrompt: asSystemPrompt([]),
     userPrompt: modelPrompt,
     signal,

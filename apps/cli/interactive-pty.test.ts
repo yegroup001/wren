@@ -19,7 +19,6 @@ async function tempProject(): Promise<string> {
     join(dir, ".config", "wren", "config.json"),
     JSON.stringify({
       defaultModel: { source: "default", model: "gpt-5.5" },
-      smallFastModel: { source: "default", model: "gpt-5.5" },
       sources: {
         default: {
           type: "openai-compatible-chat",

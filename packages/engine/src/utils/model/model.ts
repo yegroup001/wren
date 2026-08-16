@@ -26,9 +26,12 @@ function bareModelName(model: ModelName): ModelName {
   return slashIdx > 0 ? model.slice(slashIdx + 1) : model
 }
 
+/**
+ * Returns the defaultModel. Used by side-query call sites that haven't been
+ * explicitly classified in taskModels.
+ */
 export function getSmallFastModel(): ModelName {
-  const config = getConfig()
-  return formatModelReference(config.roles?.fast ?? config.smallFastModel)
+  return formatModelReference(getConfig().defaultModel)
 }
 
 export function isNonCustomOpusModel(model: ModelName): boolean {
@@ -80,20 +83,18 @@ export function getBestModel(): ModelName {
 
 // @[MODEL LAUNCH]: Update the default Opus model (3P providers may lag so keep defaults unchanged).
 export function getDefaultOpusModel(): ModelName {
-  const config = getConfig()
-  return formatModelReference(config.roles?.reasoning ?? config.defaultModel)
+  return formatModelReference(getConfig().defaultModel)
 }
 
 // @[MODEL LAUNCH]: Update the default Sonnet model (3P providers may lag so keep defaults unchanged).
 export function getDefaultSonnetModel(): ModelName {
-  const config = getConfig()
-  return formatModelReference(config.roles?.standard ?? config.defaultModel)
+  return formatModelReference(getConfig().defaultModel)
 }
 
 // @[MODEL LAUNCH]: Update the default Haiku model (3P providers may lag so keep defaults unchanged).
+// NOTE: legacy name. Now just returns defaultModel.
 export function getDefaultHaikuModel(): ModelName {
-  const config = getConfig()
-  return formatModelReference(config.roles?.fast ?? config.smallFastModel)
+  return formatModelReference(getConfig().defaultModel)
 }
 
 /**

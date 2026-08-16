@@ -11,7 +11,6 @@ import {
 
 const validConfig = {
   defaultModel: { source: "test", model: "user-model" },
-  smallFastModel: { source: "test", model: "user-model" },
   sources: {
     test: {
       type: "openai-compatible-chat" as const,
@@ -148,7 +147,6 @@ describe("Wren config loading", () => {
           },
         },
         defaultModel: { source: "second", model: "gpt-5.6-luna", effort: "high" },
-        smallFastModel: { source: "first", model: "gpt-5.6-luna" },
       }),
     )
 

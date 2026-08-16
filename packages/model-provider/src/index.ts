@@ -26,6 +26,7 @@ export * from "./types/index.js"
 export { resolveOpenAIModel } from "./providers/openai/modelMapping.js"
 export { resolveGrokModel } from "./providers/grok/modelMapping.js"
 export { resolveGeminiModel } from "./providers/gemini/modelMapping.js"
+export { getModelFamily, strip1mSuffix } from "./providers/shared/modelFamily.js"
 
 // Gemini provider utilities
 export { anthropicMessagesToGemini } from "./providers/gemini/convertMessages.js"

@@ -211,6 +211,7 @@ async function getCommandPrefixImpl(
     const useSystemPromptPolicySpec = getLocalFeatureValue("wren_cork_m4q", false)
 
     const response = await queryHaiku({
+      taskModelKey: "classifier",
       systemPrompt: asSystemPrompt(
         useSystemPromptPolicySpec
           ? [
