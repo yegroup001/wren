@@ -29,6 +29,7 @@ import { toError } from "./utils/errors.js"
 import { logForDebugging } from "./utils/debug.js"
 import { getSkillDirCommands, clearSkillCaches, getDynamicSkills } from "./skills/loadSkillsDir.js"
 import { getBundledSkills } from "./skills/bundledSkills.js"
+import { ensureBundledSkillsRegistered } from "./skills/bundled/index.js"
 import { getBuiltinPluginSkillCommands } from "./plugins/builtinPlugins.js"
 import {
   getPluginCommands,
@@ -115,6 +116,7 @@ async function getSkills(cwd: string): Promise<{
       }),
     ])
     // Bundled skills are registered synchronously at startup
+    ensureBundledSkillsRegistered()
     const bundledSkills = getBundledSkills()
     // Built-in plugin skills come from enabled built-in plugins
     const builtinPluginSkills = getBuiltinPluginSkillCommands()
